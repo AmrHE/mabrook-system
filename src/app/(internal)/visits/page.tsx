@@ -23,7 +23,8 @@ const VisitsPage = async () => {
 
   const processedVisits: ProcessedVisit[] = [];
 
-  const data = await fetch(`${host}/api/visit/get-visits`, {
+  const data = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/visit/get-visits`, {
+    
     method: 'GET',
     headers: {
       authorization: `Bearer ${userToken}`,

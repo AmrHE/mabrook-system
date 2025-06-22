@@ -12,8 +12,7 @@ async function getVisitData(id: string, userToken: any) {
   const headersList = await headers();
   const host = headersList.get('host');
 
-  console.log(host)
-const res = await fetch(`${host}/api/visit/get-visit/${id}`, {
+const res = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/visit/get-visit/${id}`, {
   cache: 'no-store',
   headers: {
     'Content-Type': 'application/json',
