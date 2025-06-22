@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import React from 'react'
 import {
   Tabs,
@@ -9,7 +9,11 @@ import {
 } from "@/components/ui/tabs"
 
 async function getVisitData(id: string, userToken: any) {
-const res = await fetch(`${process.env.URL}/api/visit/get-visit/${id}`, {
+  const headersList = await headers();
+  const host = headersList.get('host');
+
+  console.log(host)
+const res = await fetch(`${host}/api/visit/get-visit/${id}`, {
   cache: 'no-store',
   headers: {
     'Content-Type': 'application/json',

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { columns } from "./columns";
 import { ClientDataTable } from './client-data-table';
 
@@ -16,9 +16,14 @@ const VisitsPage = async () => {
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
 
+    const headersList = await headers();
+    const host = headersList.get('host');
+  
+    console.log(host)
+
   const processedVisits: ProcessedVisit[] = [];
 
-  const data = await fetch(`${process.env.URL}/api/visit/get-visits`, {
+  const data = await fetch(`${host}/api/visit/get-visits`, {
     method: 'GET',
     headers: {
       authorization: `Bearer ${userToken}`,
