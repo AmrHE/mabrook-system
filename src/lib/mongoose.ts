@@ -1,11 +1,18 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+ 
 
-import { Hospital } from '@/models/Hospital'
-import { Shift } from '@/models/Shift'
-import { User } from '@/models/User'
-import { Visit } from '@/models/Visit'
+// import { Hospital } from '@/models/Hospital'
+// import { Shift } from '@/models/Shift'
+// import { User } from '@/models/User'
+// import { Visit } from '@/models/Visit'
 import mongoose from 'mongoose'
 
+// Import all your models here - this ensures they are registered
+import '@/models/User'
+import '@/models/Visit'
+import '@/models/Hospital'
+import '@/models/Shift'
+import '@/models/Mom'
+import '@/models/Product'
 
 const MONGODB_URI = process.env.MONGO_URI
 

@@ -30,7 +30,7 @@ const SingleVisitPage = async ({ params }: { params: Promise<{ id: string }> }) 
   const { id } = await params;
   const visit = await getVisitData(id, userToken);
 
-  console.log(visit);
+  // console.log(visit);
 
   return (
     <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>

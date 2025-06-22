@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   /***************Auth GAURD END****************/
 
   const { name, district, city, shiftId, location } = await req.json();
-console.log({ name, district, city, shiftId, location })
+// console.log({ name, district, city, shiftId, location })
   if (!name || !district || !city || !shiftId || !location) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }

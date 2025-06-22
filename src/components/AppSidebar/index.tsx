@@ -49,7 +49,7 @@ export function AppSidebar() {
   useEffect(() => {
     if(typeof window !== "undefined") {
       const direction = document.documentElement.getAttribute('dir') as 'ltr' | 'rtl';
-      console.log(direction)
+      // console.log(direction)
       setDir(direction);
     };
   }, []);

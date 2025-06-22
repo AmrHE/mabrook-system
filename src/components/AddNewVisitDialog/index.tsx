@@ -56,8 +56,7 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
     const data = await res.json();
 
     if (res.status === 201) {
-
-      console.log(data)
+      // console.log(data)
       router.push(`/visits/${data.visit._id}`)
     } else {
       console.log('error', data.message);

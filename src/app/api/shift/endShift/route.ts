@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({status: 404, message: "No shift is currently opened! please start a new shift"})
   }
 
-  console.log(endedShift)
+  // console.log(endedShift)
 
   await endedShift.save()
   const cookieStore = await cookies()

@@ -19,7 +19,7 @@ const VisitsPage = async () => {
     const headersList = await headers();
     const host = headersList.get('host');
   
-    console.log(host)
+    // console.log(host)
 
   const processedVisits: ProcessedVisit[] = [];
 
@@ -44,7 +44,7 @@ const VisitsPage = async () => {
         employeeName: `${visit.createdBy.firstName} ${visit.createdBy.lastName}`,
       });
     });
-    console.log(processedVisits);
+    // console.log(processedVisits);
   }
 
   return (
