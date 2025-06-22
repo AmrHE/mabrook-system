@@ -1,4 +1,4 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose from "mongoose";
 import { shiftStatus } from "./enum.constants";
 
 const ShiftSchema = new mongoose.Schema({
@@ -24,7 +24,7 @@ const ShiftSchema = new mongoose.Schema({
   },
 
   userId: {
-    type: Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
 });
