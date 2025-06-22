@@ -7,12 +7,12 @@ const HospitalSchema = new mongoose.Schema({
   },
 
   visitId: {
-    type: mongoose.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: "Visit",
   },
 
   createdBy: {
-    type: mongoose.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   },

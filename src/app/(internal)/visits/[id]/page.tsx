@@ -30,6 +30,8 @@ const SingleVisitPage = async ({ params }: { params: Promise<{ id: string }> }) 
   const { id } = await params;
   const visit = await getVisitData(id, userToken);
 
+  console.log(visit);
+
   return (
     <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
       {visit && (
@@ -71,7 +73,12 @@ const SingleVisitPage = async ({ params }: { params: Promise<{ id: string }> }) 
             <p>{visit.visit.hospitalId.name}</p>
             <p>{visit.visit.hospitalId.city}</p>
             <p>{visit.visit.hospitalId.district}</p>
-            <p>{visit.visit.hospitalId.district}</p>{/* TODO: ADD THE GOOGLE MAPS LOCATION URL HERE INSTEAD OF DISTRICT */}
+            <a
+            className='text-blue-500 hover:underline'
+              target="_blank"
+              rel="noopener noreferrer"
+              href={`https://www.google.com/maps/?q=${visit.visit.hospitalId.location.lat},${visit.visit.hospitalId.location.lng}`}
+            >Open In Google Maps</a>
           </div>
         </div>
 

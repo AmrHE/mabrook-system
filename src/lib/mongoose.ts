@@ -1,4 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
+import { Hospital } from '@/models/Hospital'
+import { Shift } from '@/models/Shift'
+import { User } from '@/models/User'
+import { Visit } from '@/models/Visit'
 import mongoose from 'mongoose'
 
 
@@ -27,6 +32,7 @@ async function dbConnect() {
         }
         cached.promise = mongoose.connect(MONGODB_URI as string, opts).then(mongoose => {
             console.log('Db connected')
+            // Models are imported at the top to ensure they are registered
             return mongoose
         })
     }

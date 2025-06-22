@@ -36,13 +36,13 @@ const UserSchema = new mongoose.Schema({
 
   phoneNumber: String,
   shifts: {
-    type: [mongoose.Types.ObjectId],
+    type: [mongoose.Schema.Types.ObjectId],
     ref: "Shift",
     default: []
   },
 
   visits: {
-    type: [mongoose.Types.ObjectId],
+    type: [mongoose.Schema.Types.ObjectId],
     ref: "Visit",
     default: []
   },
