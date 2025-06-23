@@ -2,7 +2,7 @@ import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { userRoles } from "@/models/enum.constants";
-import { Visit } from "@/models/Visit";
+import { Hospital } from "@/models/Hospital";
 
 export async function GET(req: NextRequest) {
   await initDb();
@@ -21,16 +21,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
 
-  const visits = await Visit
+  const hospitals = await Hospital
   .find(userPayload.role === userRoles.ADMIN ? {} : {createdBy: userPayload._id} )
-  .populate('hospitalId')
-  .populate('shiftId')
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
   .sort({ createdAt: -1 });
 
-  if(!visits) {
-    return NextResponse.json({status: 404, message: "No visits found"})
+  if(!hospitals) {
+    return NextResponse.json({status: 404, message: "No hospitals found"})
   }
 
-  return NextResponse.json({ message: "Visits fetched successfully", visits }, { status: 200 });
+  return NextResponse.json({ message: "Hospitals fetched successfully", hospitals }, { status: 200 });
 }
