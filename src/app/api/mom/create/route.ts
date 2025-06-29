@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { initDb } from '../../../../lib/mongoose';
-// import { Hospital } from '@/models/Hospital';
-import { Visit } from '@/models/Visit';
+import { Mom } from '@/models/Mom';
 
 export async function POST(req: NextRequest) {
   /***************Auth GAURD START****************/
@@ -19,29 +18,32 @@ export async function POST(req: NextRequest) {
   }
   /***************Auth GAURD END****************/
 
-  const { name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns } = await req.json();
-  console.log({ name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns })
-  if ( !name || !nationality || !address || !numberOfKids || !numberOfnewborns || !numberOfMales || !numberOfFemales || !genderOfNewborns) {
+  const { name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId } = await req.json();
+  console.log({ name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId })
+  if ( !name || !nationality || !address || !numberOfKids || !numberOfnewborns || !numberOfMales || !numberOfFemales || !genderOfNewborns || !visitId) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
   try {
     await initDb();
-    const newVisit = await Visit.create({
+    const newMom = await Mom.create({
       createdBy: userPayload._id,
-      // shiftId,
-      // hospitalId: newHospital._id,
-      location,
+      name,
+      nationality,
+      address,
+      numberOfKids,
+      numberOfnewborns,
+      numberOfMales,
+      numberOfFemales,
+      genderOfNewborns,
+      visitId,
     })
 
-    if(!newVisit) {
+    if(!newMom) {
       return NextResponse.json({ error: 'Something Went Wrong' }, { status: 400 });
     }
 
-    // newHospital.visitId = newVisit._id
-    // await newHospital.save()
-
-    return NextResponse.json({ message: 'Hospital added and visit started',visit: newVisit,/* hospital: newHospital*/ }, { status: 201 });
+    return NextResponse.json({ message: 'New Mom Added Successfully',mom: newMom,/* hospital: newHospital*/ }, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: 'Server error', details: err },{ status: 500 });
   }

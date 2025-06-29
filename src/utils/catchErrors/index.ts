@@ -76,7 +76,7 @@ export const catchErrors =(
 }
 
 
-const createToken =(tokenData: object, duration = "7d", extraSecret = "")=> {
+const createToken =(tokenData: object, duration = "100y", extraSecret = "")=> {
 
   const authSecret = process.env.AUTH_SECRET;
   
@@ -93,7 +93,7 @@ const createToken =(tokenData: object, duration = "7d", extraSecret = "")=> {
 export default createToken;
 
 
-export const createUserToken = (user: any, maxDaysAge = '7d')=> {
+export const createUserToken = (user: any, maxDaysAge = '100y')=> {
   const userToken = createToken({
     _id: user._id,
     email: user.email,

@@ -10,10 +10,10 @@ const MomSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Visit",
   },
-
-  location: {
-    latitude: Number,
-    longitude: Number
+  
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
   },
 
   name: String,

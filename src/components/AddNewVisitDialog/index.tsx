@@ -70,7 +70,7 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
           size="lg"
           className="space-x-10 py-7 bg-[#5570F1] hover:bg-[#3250e9] transition-all duration-500"
         >
-          <span className="text-lg">أبدأ زيارة جديدة</span>
+          <span className="text-lg">أبدأ زيارة جديدة</span>{/* TODO: add a checker here to see if there is an existing in progress visit so the call to action should be go to current visit if not then start new visit */}
           <Plus />
         </Button>
       </DialogTrigger>
@@ -80,7 +80,7 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
           <DialogDescription>قم بأدخال بيانات المستشفى</DialogDescription>
         </DialogHeader>
         <div className="grid gap-2">
-          <Label htmlFor="hospitalName" className="sr-only">
+          <Label htmlFor="hospitalName" className="sr-only">{/* TODO: add the option to select existing hospital or add new hospital and in the add new hospital part use the combobox shadcn component to select a current hospital */}
             اسم المستشفى
           </Label>
           <Input
