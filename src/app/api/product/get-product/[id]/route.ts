@@ -2,7 +2,7 @@ import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { userRoles } from "@/models/enum.constants";
-import { Hospital } from "@/models/Hospital";
+import { Product } from "@/models/Product";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
 
@@ -26,18 +26,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
 
-  const hospital = await Hospital
-  .findById(id)
-  .populate('visitId')
-  .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
-
-  if(userPayload.role !== userRoles.ADMIN && userPayload._id !== hospital?.createdBy._id) {
-    return NextResponse.json({status: 403, message: "You are not authorized to view this hospital"}, { status: 403 });
+  if(userPayload.role === userRoles.EMPLOYEE) {
+    return NextResponse.json({status: 403, message: "You are not authorized to view this product"}, { status: 403 });
   }
 
-  if(!hospital) {
-    return NextResponse.json({status: 404, message: "No hospital found with the provided ID"})
+  const product = await Product.findById(id) //TODO: ADD THE populate functionality FOR THE PRODUCT CREATOR HERE
+  // .populate('createdBy', 'email firstName lastName');
+
+  if(!product) {
+    return NextResponse.json({status: 404, message: "No product found with the provided ID"})
   }
 
-  return NextResponse.json({ message: "Hospital fetched successfully", hospital }, { status: 200 });
+  return NextResponse.json({ message: "Product fetched successfully", product }, { status: 200 });
 }

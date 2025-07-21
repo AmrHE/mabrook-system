@@ -40,7 +40,7 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
       <Tabs dir='rtl' defaultValue="hospitalDetails" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="hospitalDetails" className='cursor-pointer'>تفاصيل المستشفى</TabsTrigger>
-        {/* <TabsTrigger value="productDetails" className='cursor-pointer'>تفاصيل المنتجات</TabsTrigger> */} {/*TODO: add product details tab*/}
+        {/* <TabsTrigger value="productDetails" className='cursor-pointer'>تفاصيل المنتجات</TabsTrigger> */} {/*TODO: add products & stock details tab*/}
       </TabsList>
       <TabsContent value="hospitalDetails">
         <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل المستشفى</h4>

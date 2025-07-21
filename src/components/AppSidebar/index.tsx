@@ -1,5 +1,5 @@
 "use client"
-import { BookUser, Contact, Home, Hospital, Settings } from "lucide-react"
+import { BookUser, Contact, Home, Hospital, Settings, Users, Warehouse } from "lucide-react"
 
 import {
   Sidebar,
@@ -13,6 +13,7 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { useEffect, useState } from "react";
+import { userRoles } from "@/models/enum.constants";
 
 // Menu items.
 const items = [
@@ -20,6 +21,16 @@ const items = [
     title: "Home",
     url: "/",
     icon: Home,
+  },
+  {
+    title: "Employees",
+    url: "/employees",
+    icon: Users,
+  },
+  {
+    title: "Products",
+    url: "/products",
+    icon: Warehouse,
   },
   {
     title: "Visits",
@@ -43,8 +54,9 @@ const items = [
   },
 ]
 
-export function AppSidebar() {
+export function AppSidebar({userRole}: {userRole?: string}) {
   const [dir, setDir] = useState<'ltr' | 'rtl'>('rtl');
+
 
   useEffect(() => {
     if(typeof window !== "undefined") {
@@ -62,7 +74,10 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarSeparator />
             <SidebarMenu>
-              {items.map((item) => (
+              {items.map((item) => {
+                if (item.title === "Employees" && userRole !== userRoles.ADMIN) return null;
+                if (item.title === "Products" && userRole === userRoles.EMPLOYEE) return null;
+                return(
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild className="w-full flex items-center justify-center">
                     <a href={item.url}>
@@ -71,7 +86,7 @@ export function AppSidebar() {
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
+              )})}
             </SidebarMenu>
             <SidebarSeparator />
           </SidebarGroupContent>

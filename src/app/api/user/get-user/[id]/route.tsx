@@ -2,15 +2,15 @@ import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { userRoles } from "@/models/enum.constants";
-import { Hospital } from "@/models/Hospital";
+import { User } from "@/models/User";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
 
   const { id } = await params;
 
-  
+
   await initDb();
-  /***************AUTH GAURD START****************/
+  /***************ADMIN GAURD START****************/
   const authHeader = req.headers.get('authorization');
   const userToken = authHeader?.split(" ")[1];
   if (!userToken){
@@ -18,26 +18,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
-  /***************AUTH GAURD END****************/
 
-  // console.log("User Payload:", userPayload);
+  if (userPayload.role !== userRoles.ADMIN){
+    return NextResponse.json({status: 403, message: "This Action is only allowed for Admins"})
+  }
+  /***************ADMIN GAURD END****************/
 
   if (!userPayload) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
 
-  const hospital = await Hospital
-  .findById(id)
-  .populate('visitId')
-  .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
+  const user = await User.findById(id)
+  .sort({ createdAt: -1 });//remove this sort function and check this line all over the codebase
 
-  if(userPayload.role !== userRoles.ADMIN && userPayload._id !== hospital?.createdBy._id) {
-    return NextResponse.json({status: 403, message: "You are not authorized to view this hospital"}, { status: 403 });
+  if(!user) {
+    return NextResponse.json({status: 404, message: "No user found"})
   }
 
-  if(!hospital) {
-    return NextResponse.json({status: 404, message: "No hospital found with the provided ID"})
-  }
-
-  return NextResponse.json({ message: "Hospital fetched successfully", hospital }, { status: 200 });
+  return NextResponse.json({ message: "User fetched successfully", user }, { status: 200 });
 }

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
   const { name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId } = await req.json();
   console.log({ name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId })
-  if ( !name || !nationality || !address || !numberOfKids || !numberOfnewborns || !numberOfMales || !numberOfFemales || !genderOfNewborns || !visitId) {
+  if ( !name || !nationality || !address || !numberOfKids || !numberOfnewborns || !genderOfNewborns || !visitId) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 

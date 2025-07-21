@@ -50,7 +50,7 @@ const MomsPage = async () => {
 
   return (
     <div>
-      <h1 className='text-3xl font-bold p-4 mb-10'>الزيارات</h1>
+      <h1 className='text-3xl font-bold p-4 mb-10'>الأمهات</h1>
       <ClientDataTable columns={columns} data={processedMoms} />
     </div>
   );

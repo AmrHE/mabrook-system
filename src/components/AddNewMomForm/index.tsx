@@ -167,7 +167,7 @@ const AddNewMomForm = ({userToken}: {userToken: string | undefined}) => {
         </div>
       ))}
       <div className='flex items-center justify-center w-full mt-4'>
-        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit'>Add Mom</Button>
+        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit'>اضافة الام</Button>
       </div>
     </form>
   )
