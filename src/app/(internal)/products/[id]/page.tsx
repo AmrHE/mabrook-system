@@ -8,6 +8,8 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { userRoles } from '@/models/enum.constants';
+import EditProductForm from '@/components/EditProductForm';
+import AddQuestionsForm from '@/components/AddQuestionsForm';
 
 const SingleProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const cookieStore = await cookies();
@@ -48,50 +50,62 @@ const SingleProductPage = async ({ params }: { params: Promise<{ id: string }> }
       <Tabs dir='rtl' defaultValue="productDetails" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="productDetails" className='cursor-pointer'>تفاصيل المنتج</TabsTrigger>
-        <TabsTrigger value="editQuantity" className='cursor-pointer'>تعديل الكميات</TabsTrigger>
+        <TabsTrigger value="editProduct" className='cursor-pointer'>تعديل المنتج</TabsTrigger>
         {userRole === userRoles.ADMIN &&(
           <TabsTrigger value="addQuestions" className='cursor-pointer'>اضافة اسئلة</TabsTrigger>
         )}
       </TabsList>
       <TabsContent value="productDetails">
         <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>بيانات المتج</h4>
-        <div className='flex max-w-[300px] justify-between'>
-          <div className='flex flex-col gap-5'>
+        <div className='flex flex-col gap-6 overflow-hidden'>
+          <div className='flex items-start gap-20'>
             <p>اسم المنتج</p>
-            <p>رقم المنتج</p>
-            <p>وصف المنتج</p>
-            <p>حجم المنتج</p>
-            <p>تاريخ الاضافة</p>
-          </div>
-          <div className='flex flex-col gap-5'>
             <p>{product.product.name}</p>
-            <p className='max-w-28 truncate'>{product.product._id}</p>
-            <p>{product.product.description}</p>
-            <p>{product.product.size}</p>
-            <p>{new Date(product.product.createdAt).toDateString()}</p>
+          </div>
+          <div className='flex items-start gap-20'>
+            <p>رقم المنتج</p>
+            <p className='truncate'>{product.product._id}</p>
+          </div>
+          <div className='flex items-start gap-20'>
+            <p>وصف المنتج</p>
+            <p className='max-w-4/6'>{product.product.description}</p>
+          </div>
+          <div className='flex items-start gap-20'>
+            <p>حجم المنتج</p>
+            <p className='truncate'>{product.product.size}</p>
+          </div>
+          <div className='flex items-start gap-20'>
+            <p>تاريخ الاضافة</p>
+            <p className='truncate'>{new Date(product.product.createdAt).toDateString()}</p>
+          </div>
+          <div className='flex items-start gap-20'>
+            <p>تاريخ اخر تعديل</p>
+            <p className='truncate'>{new Date(product.product.updatedAt).toDateString()}</p>
           </div>
         </div>
 
         <h4 className='mt-16 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل المخزون</h4>
-        <div className='flex max-w-[300px] justify-between'>
-          <div className='flex flex-col gap-5'>
+        <div className='flex flex-col gap-6 overflow-hidden'>
+          <div className='flex items-start gap-20'>
             <p>اجمالي المخزون</p>
-            <p>مخزون المستودع</p>
-            <p>مخزون المستشفيات</p>
-          </div>
-          <div className='flex flex-col gap-5'>
             <p>{product.product.totalQuantity}</p>
+          </div>
+          <div className='flex items-start gap-20'>
+            <p>مخزون المستودع</p>
             <p>{product.product.warehouseQuantity}</p>
+          </div>
+          <div className='flex items-start gap-20'>
+            <p>مخزون المستشفيات</p>
             <p>{product.product.hospitalsQuantity}</p>
           </div>
         </div>
 
       </TabsContent>
-      <TabsContent value="editQuantity">
-        {/* <ClientDataTable columns={columns} data={processedMoms} /> */}
+      <TabsContent value="editProduct">
+        <EditProductForm userToken={userToken} product={product.product}/>
       </TabsContent>
       <TabsContent value="addQuestions">
-        {/* <AddNewMomForm userToken={userToken} /> */}
+        <AddQuestionsForm userToken={userToken} product={product.product}/>
       </TabsContent>
     </Tabs>
     </div>

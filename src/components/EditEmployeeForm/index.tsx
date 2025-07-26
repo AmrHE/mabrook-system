@@ -45,9 +45,6 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
     }
   }, [updatedUser]);
 
-
-
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {

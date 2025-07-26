@@ -2,11 +2,13 @@
 import { cookies, headers } from 'next/headers';
 import { columns } from "./columns";
 import { ClientDataTable } from './client-data-table';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 type Product = {
   id: string;
   name: string;
-  // imageUrl: string;
+  // imageUrl: string; TODO IMPLEMENT IMAGE UPLOAD
   size: string;
   totalQuantity: number;
   warehouseQuantity: number;
@@ -50,7 +52,13 @@ const ProductsPage = async () => {
 
   return (
     <div>
-      <h1 className='text-3xl font-bold p-4 mb-10'>المنتجات</h1>
+      <div className='flex items-center justify-between p-4 rounded-3xl mb-10'>
+        <h1 className='text-3xl font-bold p-4 mb-10'>المنتجات</h1>
+        <Button>
+          <Link href="/products/create">إضافة منتج جديد</Link>
+        </Button>
+      </div>
+
       <ClientDataTable columns={columns} data={processedProducts} />
     </div>
   );

@@ -1,19 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Label } from '../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-
 import { Input } from '../ui/input'
-import { useParams } from 'next/navigation';
 import { Button } from '../ui/button';
 import { userRoles } from '@/models/enum.constants';
 
 
-const CreateNewEmployee = ({userToken, role}: {userToken: string | undefined, role: string | undefined}) => {
-  const params = useParams();
-  const userId = params.id as string;
+const CreateNewEmployee = ({userToken}: {userToken: string | undefined}) => {
   const [firstName, setFirstName] = useState<string|null>(null)
   const [lastName, setLastName] = useState<string|null>(null)
   const [phoneNumber, setPhoneNumber] = useState<string|null>(null)
