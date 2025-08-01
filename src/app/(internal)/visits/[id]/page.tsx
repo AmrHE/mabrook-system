@@ -11,6 +11,7 @@ import AddNewMomForm from '@/components/AddNewMomForm';
 import { shiftStatus } from '@/models/enum.constants';
 import { ClientDataTable } from './client-data-table';
 import { columns } from './columns';
+import EndVisitButton from '@/components/EndVisitButton';
 
 
 type Mom = {
@@ -28,6 +29,7 @@ const SingleVisitPage = async ({ params }: { params: Promise<{ id: string }> }) 
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
   const userId = cookieStore.get('userId')?.value;
+  const visitStatus = cookieStore.get('visitStatus')?.value;
   const headersList = await headers();
   const host = headersList.get('host');
 
@@ -54,6 +56,8 @@ async function getMomsData(visitId: string, userToken: any) {
   });
   return res.json();
 }
+
+
 
   const visit = await getVisitData(id, userToken);
   const moms = await getMomsData(id, userToken);
@@ -85,7 +89,12 @@ async function getMomsData(visitId: string, userToken: any) {
   return (
     <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
       {visit && (
-        <h1 className='text-gray-800 font-bold text-3xl mb-10'>زيارة مستشفى {visit.visit.hospitalId.name}</h1>
+        <div className='flex items-center justify-between mb-10'>
+          <h1 className='text-gray-800 font-bold text-3xl'>زيارة مستشفى {visit.visit?.hospitalId?.name}</h1>
+          {visitStatus === shiftStatus.IN_PROGRESS && (
+            <EndVisitButton id={id} userToken={userToken}/>
+          )}
+        </div>
       )}
 
       <Tabs dir='rtl' defaultValue="visitDetails" className="w-full">
@@ -147,51 +156,3 @@ async function getMomsData(visitId: string, userToken: any) {
 }
 
 export default SingleVisitPage
-
-
-// /* eslint-disable @typescript-eslint/no-explicit-any */
-// import { cookies, headers } from 'next/headers';
-// import React from 'react'
-// import {
-//   Tabs,
-//   TabsContent,
-//   TabsList,
-//   TabsTrigger,
-// } from "@/components/ui/tabs"
-// import AddNewMomForm from '@/components/AddNewMomForm';
-// import VisitDetailsTabs from '@/components/VisitDetailsTabs';
-
-
-// async function getVisitData(id: string, userToken: any) {
-//   const headersList = await headers();
-//   const host = headersList.get('host');
-//   const res = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/visit/get-visit/${id}`, {
-//     cache: 'no-store',
-//     headers: {
-//       'Content-Type': 'application/json',
-//       authorization: `Bearer ${userToken}`,
-//     },
-//   });
-//   return res.json();
-// }
-
-// // async function getMomsData(visitId: string, userToken: any) {}
-
-// const SingleVisitPage = async ({ params }: { params: Promise<{ id: string }> }) => {
-//   const cookieStore = await cookies();
-//   const userToken = cookieStore.get('access_token')?.value;
-
-//   const { id } = await params;
-//   const visit = await getVisitData(id, userToken);
-
-//   return (
-//     <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
-//       {visit && (
-//         <h1 className='text-gray-800 font-bold text-3xl mb-10'>زيارة مستشفى {visit.visit.hospitalId.name}</h1>
-//       )}
-//       <VisitDetailsTabs visit={visit}/>
-//     </div>
-//   )
-// }
-
-// export default SingleVisitPage

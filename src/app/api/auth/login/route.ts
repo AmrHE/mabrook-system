@@ -31,8 +31,6 @@ export async function POST(req: NextRequest) {
 
   await user.save()
 
-  // console.log({user})
-
   user.password = ''; // not to return this field to the frontend
 
   const {userToken, tokenExpiration} = createUserToken(user.toObject() as unknown)

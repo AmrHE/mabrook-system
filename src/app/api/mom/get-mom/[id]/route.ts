@@ -5,7 +5,6 @@ import { userRoles } from "@/models/enum.constants";
 import { Mom } from "@/models/Mom";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
-
   const { id } = await params;
 
   
@@ -20,8 +19,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
   /***************AUTH GAURD END****************/
 
-  // console.log("User Payload:", userPayload);
-
   if (!userPayload) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
@@ -29,9 +26,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const mom = await Mom
   .findById(id)
   .populate('visitId')
+  .populate('createdBy')
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
 
-  if(userPayload.role !== userRoles.ADMIN) {
+  if(userPayload.role !== userRoles.ADMIN && userPayload._id !== mom?.createdBy._id.toString()) {
     return NextResponse.json({status: 403, message: "You are not authorized to view this mom"}, { status: 403 });
   }
 

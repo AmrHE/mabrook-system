@@ -28,7 +28,6 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
 
   const { id } = await params;
   const mom = await getMomData(id, userToken);
-console.log(mom);
   const genders = mom?.mom?.genderOfNewborns?.reduce((acc: any, value: any) => {
     acc[value] = (acc[value] || 0) + 1;
     return acc;

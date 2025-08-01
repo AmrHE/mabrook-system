@@ -12,8 +12,8 @@ type Employee = {
   email: string;
   phoneNumber: string;
   role: string;
-} //TODO: ADD IN SHIFT BOOLEAN VARIABLE TO THE EMPLOYEE IN THE FRONTEND AND THE DATABASE IF NEEDED SO THE ADMIN CAN SEE IF THE EMPLOYEE IS ON SHIFT OR NOT
-
+  isOnShift: boolean; 
+}
 
 const UsersPage = async () => {
 
@@ -44,6 +44,7 @@ const UsersPage = async () => {
         email: employee.email,
         phoneNumber: employee.phoneNumber,
         role: employee.role,
+        isOnShift: employee.isOnShift,
       });
     });
   }

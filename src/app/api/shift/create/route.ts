@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { Shift } from "@/models/Shift";
 import { cookies } from "next/headers";
 import { shiftStatus } from "@/models/enum.constants";
+import { User } from "@/models/User";
 
 
 export async function POST(req: NextRequest) {
@@ -28,6 +29,10 @@ export async function POST(req: NextRequest) {
   const newShift = await Shift.create({
     userId: userPayload._id
   })
+
+  const user = await User.findById(userPayload._id)
+  user.shifts.push(newShift._id);
+  await user.save();
 
   const cookieStore = await cookies()
   cookieStore.set('shiftStatus', shiftStatus.IN_PROGRESS)

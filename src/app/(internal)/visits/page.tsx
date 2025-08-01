@@ -19,8 +19,6 @@ const VisitsPage = async () => {
     const headersList = await headers();
     const host = headersList.get('host');
   
-    // console.log(host)
-
   const processedVisits: ProcessedVisit[] = [];
 
   const data = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/visit/get-visits`, {
@@ -40,11 +38,10 @@ const VisitsPage = async () => {
         hospitalName: visit.hospitalId.name,
         city: visit.hospitalId.city,
         district: visit.hospitalId.district,
-        momsCount: 5, // TODO: Replace with actual value if available
+        momsCount: visit?.moms?.length || 0,
         employeeName: `${visit.createdBy.firstName} ${visit.createdBy.lastName}`,
       });
     });
-    // console.log(processedVisits);
   }
 
   return (

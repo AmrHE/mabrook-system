@@ -31,9 +31,10 @@ const VisitSchema = new mongoose.Schema({
     ref: 'Hospital',
   },
 
-  momId: {
-    type: mongoose.Schema.Types.ObjectId,
+  moms: {
+    type: [mongoose.Schema.Types.ObjectId],
     ref: 'Mom',
+    default: [],
   },
 
   location: {

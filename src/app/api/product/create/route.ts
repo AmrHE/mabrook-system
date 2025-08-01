@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
   /***************ADMIN GAURD END****************/
 
   const { name, description, imageUrl, totalQuantity, warehouseQuantity, hospitalsQuantity, size } = await req.json();
-  console.log({ name, description, imageUrl, totalQuantity, warehouseQuantity, hospitalsQuantity, size })
 
   if (!name || !description || !imageUrl || !totalQuantity ) {
     if(totalQuantity === 0 || totalQuantity < 0) {

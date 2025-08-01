@@ -46,6 +46,11 @@ const UserSchema = new mongoose.Schema({
     ref: "Visit",
     default: []
   },
+
+  isOnShift: {
+    type: Boolean,
+    default: false
+  }
 });
 
 export const User = mongoose.models.User || mongoose.model("User", UserSchema);

@@ -1,12 +1,13 @@
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
-import { Shift } from "@/models/Shift";
+import { Visit } from "@/models/Visit";
 import { shiftStatus } from "@/models/enum.constants";
 import { cookies } from "next/headers";
 
-export async function GET(req: NextRequest) {
-  
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
+  const { id } = await params;
+
   await initDb();
   /***************AUTH GAURD START****************/
   const authHeader = req.headers.get('authorization');
@@ -21,18 +22,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
 
-  const endedShift = await Shift.findOneAndUpdate(
-    {userId: userPayload._id, status: shiftStatus.IN_PROGRESS}, 
+  const endVisit = await Visit.findOneAndUpdate(
+    {_id: id}, 
     {status: shiftStatus.ENDED, endTime: Date.now()},
     {new: true}
   );
 
-    if(!endedShift) {
-    return NextResponse.json({status: 404, message: "No shift is currently opened! please start a new shift"})
+    if(!endVisit) {
+    return NextResponse.json({status: 404, message: "No Visit is currently opened! please start a new Visit"})
   }
 
-  await endedShift.save()
+  await endVisit.save()
   const cookieStore = await cookies()
-  cookieStore.set('shiftStatus', shiftStatus.ENDED)
-  return NextResponse.json({ message: "Shift Started", shift: endedShift }, { status: 200 });
+  cookieStore.set('visitStatus', shiftStatus.ENDED)
+  return NextResponse.json({ message: "Visit Ended", Visit: endVisit }, { status: 200 });
 }

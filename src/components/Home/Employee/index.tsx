@@ -2,14 +2,17 @@
 import CallToActionCard from '@/components/CallToActionCard';
 import hand from '../../../../public/hand.svg';
 import { shiftStatus } from '@/models/enum.constants';
-import { Plus, ArrowLeftFromLine } from 'lucide-react';
+import { Plus, ArrowLeftFromLine, CornerDownLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ShiftType } from '@/types/types';
 import AddNewVisitDialog from '@/components/AddNewVisitDialog';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
-export default function EmployeeDashboard({userToken, currentShift}: {userToken: string | undefined; currentShift: string | undefined;}) {
+export default function EmployeeDashboard({userToken, currentShift, visitStatus, currentVisit}: {userToken: string | undefined; currentShift: string | undefined; visitStatus: string | undefined, currentVisit: string | undefined}) {
   const [shift, setShift] = useState<ShiftType | null>(null);
   const currentShiftStatus = shift?.status || currentShift;
+  const router = useRouter();
 
   const handleClick = async () => {
     if (currentShiftStatus !== shiftStatus.IN_PROGRESS) {
@@ -90,8 +93,13 @@ export default function EmployeeDashboard({userToken, currentShift}: {userToken:
             </div>
           </div>
 
-          {userToken && (
+          {userToken && visitStatus !== shiftStatus.IN_PROGRESS ? (
             <AddNewVisitDialog userToken={userToken} shiftId={shift._id} />
+          ) : (
+            <Button size="lg" className="space-x-10 py-7 bg-[#5570F1] hover:bg-[#3250e9] transition-all duration-500" onClick={() => router.push(`/visits/${currentVisit}`)}>
+              <span className="text-lg">اذهب إلى الزيارة</span>
+              <CornerDownLeft />
+            </Button>
           )}
         </div>
       )}

@@ -61,7 +61,6 @@ export function AppSidebar({userRole}: {userRole?: string}) {
   useEffect(() => {
     if(typeof window !== "undefined") {
       const direction = document.documentElement.getAttribute('dir') as 'ltr' | 'rtl';
-      // console.log(direction)
       setDir(direction);
     };
   }, []);

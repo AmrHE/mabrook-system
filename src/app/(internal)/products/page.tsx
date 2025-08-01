@@ -33,8 +33,6 @@ const ProductsPage = async () => {
     }
   const products = await getProductsData(userToken);
 
-  console.log('products', products);
-
   const processedProducts: Product[] = [];
   if (products.products.length > 0) {
     products.products.map((product: any) => {

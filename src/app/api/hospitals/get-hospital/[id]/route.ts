@@ -20,8 +20,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
   /***************AUTH GAURD END****************/
 
-  // console.log("User Payload:", userPayload);
-
   if (!userPayload) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
@@ -31,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .populate('visitId')
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
 
-  if(userPayload.role !== userRoles.ADMIN && userPayload._id !== hospital?.createdBy._id) {
+  if(userPayload.role !== userRoles.ADMIN && userPayload._id !== hospital?.createdBy._id.toString()) {
     return NextResponse.json({status: 403, message: "You are not authorized to view this hospital"}, { status: 403 });
   }
 

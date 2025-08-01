@@ -42,7 +42,6 @@ const HospitalsPage = async () => {
         employeeName: `${hospital.createdBy.firstName} ${hospital.createdBy.lastName}`,
       });
     });
-    // console.log(processedHospitals);
   }
 
   return (

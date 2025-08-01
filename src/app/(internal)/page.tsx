@@ -7,6 +7,8 @@ export default async function Home() {
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
   const shiftStatus = cookieStore.get('shiftStatus')?.value;
+  const visitStatus = cookieStore.get('visitStatus')?.value;
+  const currentVisit = cookieStore.get('currentVisit')?.value;
   const userRole = cookieStore.get('role')?.value;
 
   return (
@@ -15,7 +17,7 @@ export default async function Home() {
       <AdminDashboard />
     ) : 
     (
-      <EmployeeDashboard userToken={userToken} currentShift={shiftStatus} />
+      <EmployeeDashboard userToken={userToken} currentShift={shiftStatus} visitStatus={visitStatus} currentVisit={currentVisit} />
     )}
     </>
   );

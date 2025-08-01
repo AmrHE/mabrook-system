@@ -5,11 +5,12 @@ import React, { useState } from 'react'
 import { Label } from '../ui/label'
 import { Input } from '../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 
 
 const AddNewMomForm = ({userToken}: {userToken: string | undefined}) => {
+  const router = useRouter()
   const params = useParams();
   const visitId = params.id as string;
   const [name, setName] = useState('')
@@ -61,7 +62,7 @@ const AddNewMomForm = ({userToken}: {userToken: string | undefined}) => {
       if (!res.ok) {
         throw new Error(data.message || 'Something went wrong');
       }
-
+      router.push(`/moms/${data.mom._id}`)
       setResponseMessage('Mom submitted successfully!');
     } catch (error: any) {
       setResponseMessage(`Error: ${error.message}`);

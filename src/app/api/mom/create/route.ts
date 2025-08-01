@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { initDb } from '../../../../lib/mongoose';
 import { Mom } from '@/models/Mom';
+import { Visit } from '@/models/Visit';
 
 export async function POST(req: NextRequest) {
   /***************Auth GAURD START****************/
@@ -19,7 +20,6 @@ export async function POST(req: NextRequest) {
   /***************Auth GAURD END****************/
 
   const { name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId } = await req.json();
-  console.log({ name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId })
   if ( !name || !nationality || !address || !numberOfKids || !numberOfnewborns || !genderOfNewborns || !visitId) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
@@ -42,6 +42,14 @@ export async function POST(req: NextRequest) {
     if(!newMom) {
       return NextResponse.json({ error: 'Something Went Wrong' }, { status: 400 });
     }
+
+    const visit = await Visit.findById(visitId);
+    if(!visit) {
+      return NextResponse.json({ error: 'Visit not found' }, { status: 404 });
+    }
+
+    visit.moms.push(newMom._id);
+    await visit.save();
 
     return NextResponse.json({ message: 'New Mom Added Successfully',mom: newMom,/* hospital: newHospital*/ }, { status: 201 });
   } catch (err) {

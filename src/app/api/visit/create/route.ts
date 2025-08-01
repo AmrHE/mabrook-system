@@ -3,6 +3,9 @@ import jwt from 'jsonwebtoken';
 import { initDb } from '../../../../lib/mongoose';
 import { Hospital } from '@/models/Hospital';
 import { Visit } from '@/models/Visit';
+import { User } from '@/models/User';
+import { cookies } from 'next/headers';
+import { shiftStatus } from '@/models/enum.constants';
 
 export async function POST(req: NextRequest) {
   /***************Auth GAURD START****************/
@@ -23,7 +26,6 @@ export async function POST(req: NextRequest) {
   /***************Auth GAURD END****************/
 
   const { name, district, city, shiftId, location } = await req.json();
-// console.log({ name, district, city, shiftId, location })
   if (!name || !district || !city || !shiftId || !location) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
@@ -60,6 +62,14 @@ export async function POST(req: NextRequest) {
 
     newHospital.visitId = newVisit._id
     await newHospital.save()
+
+    const user = await User.findById(userPayload._id)
+    user.visits.push(newVisit._id);
+    await user.save();
+
+  const cookieStore = await cookies()
+  cookieStore.set('visitStatus', shiftStatus.IN_PROGRESS)
+  cookieStore.set('currentVisit', newVisit._id)
 
     return NextResponse.json({ message: 'Hospital added and visit started',visit: newVisit, hospital: newHospital }, { status: 201 });
   } catch (err) {

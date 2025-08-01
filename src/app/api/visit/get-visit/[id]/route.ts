@@ -2,7 +2,6 @@ import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { userRoles } from "@/models/enum.constants";
-import { User } from "@/models/User";
 import { Visit } from "@/models/Visit";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
@@ -21,22 +20,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
   /***************AUTH GAURD END****************/
 
-  // console.log("User Payload:", userPayload);
-
   if (!userPayload) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
 
-  const user = await User.findById(userPayload._id)
-
-  
   const visit = await Visit
   .findById(id)
   .populate('hospitalId')
   .populate('shiftId')
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
 
-  if(user.role !== userRoles.ADMIN && user._id !== visit?.createdBy._id) {
+
+  if(userPayload.role !== userRoles.ADMIN && userPayload._id !== visit?.createdBy._id.toString()) {
     return NextResponse.json({status: 403, message: "You are not authorized to view this visit"}, { status: 403 });
   }
 

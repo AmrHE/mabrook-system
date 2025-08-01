@@ -31,11 +31,6 @@ const AdminDashboard = async () => {
   const outOfStockProducts = products.products.filter((p: { totalQuantity: number; }) => p.totalQuantity < 100);
   const productsWithoutQuestions = products.products.filter((p: { questions: string | any[]; }) => p.questions.length === 0);
   
-  // console.log('products', products);
-  // console.log("Available Products:", availableProducts);
-  // console.log("Low Stock Products:", lowStockProducts);
-  // console.log("Out of Stock Products:", outOfStockProducts);
-  console.log("Products Without Questions:", productsWithoutQuestions);
   return (
     <div>
       <h1 className='font-bold mx-2.5 text-2xl my-10'>الصفحة الرئيسية للأدمن</h1>
