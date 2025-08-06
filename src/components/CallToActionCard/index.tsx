@@ -24,7 +24,7 @@ const CallToActionCard = ({icon, title, text, cta, action, CtaIcon} : ICTAProps)
     }
   };
   return (
-    <div className='flex items-center justify-between bg-white rounded-xl p-10'>
+    <div className='flex flex-col lg:flex-row gap-10 items-start lg:items-center justify-between bg-white rounded-xl p-10'>
       <div className='flex items-center ps-10 gap-4'>
         <Image src={icon} alt='icon' width={50} height={50}/>
         <div className='space-y-4'>

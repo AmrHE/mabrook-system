@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
   }
 
   const products = await Product
-  .find()//TODO: ADD THE populate functionality FOR THE PRODUCT CREATOR HERE
-  // .populate('createdBy', 'email firstName lastName')
+  .find()
+  .populate('createdBy', 'email firstName lastName')
   .sort({ createdAt: -1 });
 
   if(!products) {

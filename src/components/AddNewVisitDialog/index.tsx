@@ -69,7 +69,7 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
           size="lg"
           className="space-x-10 py-7 bg-[#5570F1] hover:bg-[#3250e9] transition-all duration-500"
         >
-          <span className="text-lg">أبدأ زيارة جديدة</span>{/* TODO: add a checker here to see if there is an existing in progress visit so the call to action should be go to current visit if not then start new visit */}
+          <span className="text-lg">أبدأ زيارة جديدة</span>
           <Plus />
         </Button>
       </DialogTrigger>

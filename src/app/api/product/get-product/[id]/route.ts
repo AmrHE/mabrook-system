@@ -28,8 +28,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({status: 403, message: "You are not authorized to view this product"}, { status: 403 });
   }
 
-  const product = await Product.findById(id) //TODO: ADD THE populate functionality FOR THE PRODUCT CREATOR HERE
-  // .populate('createdBy', 'email firstName lastName');
+  const product = await Product.findById(id) 
+  .populate('createdBy', 'email firstName lastName');
 
   if(!product) {
     return NextResponse.json({status: 404, message: "No product found with the provided ID"})

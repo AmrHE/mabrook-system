@@ -34,9 +34,9 @@ const AdminDashboard = async () => {
   return (
     <div>
       <h1 className='font-bold mx-2.5 text-2xl my-10'>الصفحة الرئيسية للأدمن</h1>
-      <div className='flex items-center justify-between flex-wrap'>
-        <div className='w-1/5'>
-          <div className='mx-2.5 px-5 flex items-center justify-start gap-8 bg-white rounded-xl'>
+      <div className='flex items-start md:items-center justify-between flex-wrap flex-col md:flex-row'>
+        <div className='w-full md:w-1/5'>
+          <div className='m-2.5 px-5 flex items-center justify-start gap-8 bg-white rounded-xl'>
             <Users color='#5570F1' size={61} className='my-12'/>
             <div>
               <p>إجمالي عدد الموظفين</p>
@@ -44,8 +44,8 @@ const AdminDashboard = async () => {
             </div>
           </div>
         </div>
-        <div className='w-1/5'>
-          <div className='mx-2.5 px-5 flex items-center justify-start gap-8 bg-white rounded-xl'>
+        <div className='w-full md:w-1/5'>
+          <div className='m-2.5 px-5 flex items-center justify-start gap-8 bg-white rounded-xl'>
             <UserCheck color='#5570F1' size={61} className='my-12'/>
             <div>
               <p>في الدوام الان</p>
@@ -53,8 +53,8 @@ const AdminDashboard = async () => {
             </div>
           </div>
         </div>
-        <div className='w-1/5'>
-          <div className='mx-2.5 px-5 flex items-center justify-start gap-8 bg-white rounded-xl'>
+        <div className='w-full md:w-1/5'>
+          <div className='m-2.5 px-5 flex items-center justify-start gap-8 bg-white rounded-xl'>
             <Hospital color='#5570F1' size={61} className='my-12'/>
             <div>
               <p>اجمالي عدد المستشفيات</p>
@@ -62,8 +62,8 @@ const AdminDashboard = async () => {
             </div>
           </div>
         </div>
-        <div className='w-1/5'>
-          <div className='mx-2.5 px-5 flex items-center justify-start gap-8 bg-white rounded-xl'>
+        <div className='w-full md:w-1/5'>
+          <div className='m-2.5 px-5 flex items-center justify-start gap-8 bg-white rounded-xl'>
             <MapPinHouse color='#5570F1' size={61} className='my-12'/>
             <div>
               <p>اجمالي عدد الزيارات</p>
@@ -71,8 +71,8 @@ const AdminDashboard = async () => {
             </div>
           </div>
         </div>
-        <div className='w-1/5'>
-          <div className='mx-2.5 px-5 flex items-center justify-start gap-8 bg-white rounded-xl'>
+        <div className='w-full md:w-1/5'>
+          <div className='m-2.5 px-5 flex items-center justify-start gap-8 bg-white rounded-xl'>
             <BookHeart color='#5570F1' size={61} className='my-12'/>
             <div>
               <p>اجمالي عدد الامهات</p>
@@ -82,7 +82,7 @@ const AdminDashboard = async () => {
         </div>
       </div>
 
-      {/* CHARTS SECTION */}
+      {/* CHARTS SECTION */}{/*TODO: ADD CHARTS HERE AS IN THE DESIGNS*/}
       {/* <div></div> */}
 
 
@@ -94,9 +94,9 @@ const AdminDashboard = async () => {
             <h1 className='text-2xl'>عدد المنتجات المتاحة: {availableProducts.length}</h1>
           </div>
 
-          <div className='flex items-center justify-between flex-wrap'>
+          <div className='flex items-start md:items-center justify-between flex-col md:flex-row flex-wrap'>
             {availableProducts.map((product: any) => (
-              <Link href={`/products/${product._id}`} className='w-1/3' key={product._id}>
+              <Link href={`/products/${product._id}`} className='w-full md:w-1/3' key={product._id}>
                 <div className='m-2 p-4 rounded-lg bg-white'>
                   <div className='flex items-center justify-between gap-4'>
                   {product.name}
@@ -121,9 +121,9 @@ const AdminDashboard = async () => {
             <h1 className='text-2xl'>منتجات على وشك النفاذ: {lowStockProducts.length}</h1>
           </div>
 
-          <div className='flex items-center justify-between flex-wrap'>
+          <div className='flex items-start md:items-center justify-between flex-col md:flex-row flex-wrap'>
             {lowStockProducts.map((product: any) => (
-              <Link href={`/products/${product._id}`} className='w-1/3' key={product._id}>
+              <Link href={`/products/${product._id}`} className='w-full md:w-1/3' key={product._id}>
                 <div className='m-2 p-4 rounded-lg bg-white'>
                   <div className='flex items-center justify-between gap-4'>
                   {product.name}
@@ -148,9 +148,9 @@ const AdminDashboard = async () => {
             <h1 className='text-2xl'>منتجات نفذت من المخزون: {outOfStockProducts.length}</h1>
           </div>
 
-          <div className='flex items-center justify-between flex-wrap'>
+          <div className='flex items-start md:items-center justify-between flex-col md:flex-row flex-wrap'>
             {outOfStockProducts.map((product: any) => (
-              <Link href={`/products/${product._id}`} className='w-1/3' key={product._id}>
+              <Link href={`/products/${product._id}`} className='w-full md:w-1/3' key={product._id}>
                 <div className='m-2 p-4 rounded-lg bg-white'>
                   <div className='flex items-center justify-between gap-4'>
                   {product.name}
@@ -175,9 +175,9 @@ const AdminDashboard = async () => {
             <h1 className='text-2xl'>منتجات بدون أسئلة: {productsWithoutQuestions.length}</h1>
           </div>
 
-          <div className='flex items-center justify-between flex-wrap'>
+          <div className='flex items-start md:items-center justify-between flex-col md:flex-row flex-wrap'>
             {productsWithoutQuestions.map((product: any) => (
-              <Link href={`/products/${product._id}`} className='w-1/3' key={product._id}>
+              <Link href={`/products/${product._id}`} className='w-full md:w-1/3' key={product._id}>
                 <div className='m-2 p-4 rounded-lg bg-white'>
                   <div className='flex items-center justify-between gap-4'>
                   {product.name}
