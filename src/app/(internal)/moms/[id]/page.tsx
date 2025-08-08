@@ -7,6 +7,9 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import ProductSurveyForm from '@/components/ProductSurveyForm';
 
 async function getMomData(id: string, userToken: any) {
   const headersList = await headers();
@@ -35,9 +38,14 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
 
   return (
     <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
-      {mom && (
-        <h1 className='text-gray-800 font-bold text-3xl mb-10'>{mom.mom.name}</h1>
-      )}
+      <div className='flex items-center justify-between'>
+        {mom && (
+          <h1 className='text-gray-800 font-bold text-3xl mb-10'>{mom.mom.name}</h1>
+        )}
+        <Button>
+          <Link href={`/moms/create?visitId=${mom.mom.visitId._id}`} >إضافة ام جديدة</Link>
+        </Button>
+      </div>
 
       <Tabs dir='rtl' defaultValue="momDetails" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
@@ -50,6 +58,7 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
           <div className='flex flex-col gap-5'>
             <p>الاسم</p>
             <p>الجنسية</p>
+            <p>هل ترغب في التواصل؟</p>
             <p>العنوان</p>
             <p>تاريخ التسجيل</p>
             <p>اسم الموظف</p>
@@ -57,6 +66,7 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
           <div className='flex flex-col gap-5'>
             <p>{mom.mom.name}</p>
             <p>{mom.mom.nationality}</p>
+            <p>{mom?.mom?.allowFutureCom ? "نعم" : "لا"}</p>
             <p>{mom.mom.address}</p>
             <p>{new Date(mom.mom.createdAt).toDateString()}</p>
             <p>{`${mom.mom.createdBy.firstName} ${mom.mom.createdBy.lastName}`}</p>
@@ -88,7 +98,7 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
         </div>
       </TabsContent>
       <TabsContent value="productDetails">
-        
+        <ProductSurveyForm id={id}/>
       </TabsContent>
     </Tabs>
     </div>

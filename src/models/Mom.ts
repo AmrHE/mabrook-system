@@ -22,6 +22,13 @@ const MomSchema = new mongoose.Schema({
 
   address: String,
 
+  phoneNumber: String,
+
+  allowFutureCom: {
+    type: Boolean,
+    default: true,
+  },
+
   numberOfKids: Number,
 
   numberOfnewborns: Number,

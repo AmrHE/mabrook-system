@@ -7,15 +7,18 @@ import { Input } from '../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
 
 
-const AddNewMomForm = ({userToken}: {userToken: string | undefined}) => {
+const AddNewMomForm = ({userToken, visit}: {userToken: string | undefined, visit?: string | undefined}) => {
   const router = useRouter()
   const params = useParams();
-  const visitId = params.id as string;
+  const visitId = params.id as string ? params.id : visit;
   const [name, setName] = useState('')
   const [nationality, setNationality] = useState('')
   const [address, setAddress] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [allowFutureCom, setAllowFutureCom] = useState(true)
   const [numberOfKids, setNumberOfKids] = useState<number | null>(null)
   const [numberOfnewborns, setNumberOfnewborns] = useState(0)
   const [numberOfMales, setNumberOfMales] = useState<number | null>(null)
@@ -34,7 +37,6 @@ const AddNewMomForm = ({userToken}: {userToken: string | undefined}) => {
     setNumberOfnewborns(count);
     setGenderOfNewborns(Array(count).fill('')); // reset or resize genders array
   }
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
@@ -54,6 +56,8 @@ const AddNewMomForm = ({userToken}: {userToken: string | undefined}) => {
           numberOfMales,
           numberOfFemales,
           genderOfNewborns,
+          phoneNumber,
+          allowFutureCom
         }),
       });
 
@@ -81,6 +85,26 @@ const AddNewMomForm = ({userToken}: {userToken: string | undefined}) => {
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
+      
+      <Label htmlFor="phoneNumber">
+        رقم الجوال
+      </Label>
+      <Input
+        placeholder="رقم الجوال"
+        id="phoneNumber"
+        required
+        value={phoneNumber}
+        onChange={(e) => setPhoneNumber(e.target.value)}
+      />
+
+      <div className='flex gap-3'>
+        <Checkbox
+          id="allowFutureCom"
+          checked={allowFutureCom}
+          onCheckedChange={(checked) => setAllowFutureCom(!!checked)}
+        />
+        <Label htmlFor="allowFutureCom">هل ترغبي في التواصل مستقبلياً؟</Label>
+      </div>
 
       <Label htmlFor="nationality">
         الجنسية

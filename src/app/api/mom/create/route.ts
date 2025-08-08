@@ -19,9 +19,9 @@ export async function POST(req: NextRequest) {
   }
   /***************Auth GAURD END****************/
 
-  const { name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId } = await req.json();
-  if ( !name || !nationality || !address || !numberOfKids || !numberOfnewborns || !genderOfNewborns || !visitId) {
-    return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+  const { name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId, phoneNumber, allowFutureCom } = await req.json();
+  if ( !name ) {
+    return NextResponse.json({ error: 'Must fill in the name' }, { status: 400 });
   }
 
   try {
@@ -37,6 +37,8 @@ export async function POST(req: NextRequest) {
       numberOfFemales,
       genderOfNewborns,
       visitId,
+      phoneNumber,
+      allowFutureCom
     })
 
     if(!newMom) {
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest) {
     visit.moms.push(newMom._id);
     await visit.save();
 
-    return NextResponse.json({ message: 'New Mom Added Successfully',mom: newMom,/* hospital: newHospital*/ }, { status: 201 });
+    return NextResponse.json({ message: 'New Mom Added Successfully',mom: newMom,}, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: 'Server error', details: err },{ status: 500 });
   }
