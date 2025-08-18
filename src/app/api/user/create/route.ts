@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcrypt";
+// import bcrypt from "bcrypt";
 import jwt from 'jsonwebtoken';
 import { userRoles } from "@/models/enum.constants";
 import { initDb } from "../../../../lib/mongoose";
@@ -36,13 +36,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User already exists" }, { status: 409 });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await User.create({
       firstName,
       lastName,
       email,
-      passwordHash: hashedPassword,
+      hashedPassword: password,
       phoneNumber,
       role
     });

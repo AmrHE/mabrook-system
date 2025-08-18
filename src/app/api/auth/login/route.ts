@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcrypt";
+// import bcrypt from "bcrypt";
 import { initDb } from "../../../../lib/mongoose";
 import { User } from "@/models/User";
 import { createUserToken } from "@/utils/catchErrors";
@@ -21,9 +21,9 @@ export async function POST(req: NextRequest) {
     
   }
 
-  const isMatching = await bcrypt.compare(password, user.passwordHash as string);
+  // const isMatching = await bcrypt.compare(password, user.passwordHash as string);
 
-  if (!isMatching){
+  if (password !== user.passwordHash) {
     return NextResponse.json({status: 401, message: "incorrect password"})
   }
 

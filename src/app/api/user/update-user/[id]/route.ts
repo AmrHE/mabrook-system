@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { userRoles } from "@/models/enum.constants";
 import { User } from "@/models/User";
-import bcrypt from "bcrypt";
+// import bcrypt from "bcrypt";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
 
@@ -43,10 +43,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (phoneNumber) user.phoneNumber = phoneNumber;
   if (email) user.email = email;
   if (userRole) user.role = userRole;
-  if (password) {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user.passwordHash = hashedPassword;
-  }
+  if (password) user.hashedPassword = password; 
+  //   {
+  //   const hashedPassword = await bcrypt.hash(password, 10);
+  //   user.passwordHash = hashedPassword;
+  // }
 
   user.updatedAt = new Date();
   await user.save();
