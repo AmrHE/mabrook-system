@@ -3,6 +3,7 @@ import React from 'react'
 import { ClientDataTable } from './client-data-table'
 import { cookies, headers } from 'next/headers';
 import { columns } from "./columns";
+import AddNewHospitalDialog from '@/components/AddNewHospitalDialog';
 
 
 type ProcessedHospitals = {
@@ -46,7 +47,10 @@ const HospitalsPage = async () => {
 
   return (
     <div>
-      <h1 className='text-3xl font-bold p-4 mb-10'>المستشفيات</h1>
+      <div className='flex items-center justify-between p-4 rounded-3xl mb-10'>
+        <h1 className='text-3xl font-bold p-4'>المستشفيات</h1>
+        <AddNewHospitalDialog userToken={userToken} />
+      </div>
       <ClientDataTable columns={columns} data={processedHospitals} />
     </div>
   )

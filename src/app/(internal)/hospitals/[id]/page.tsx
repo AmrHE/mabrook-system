@@ -49,33 +49,26 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
             <p>اسم المستشفى</p>
             <p>المدينة</p>
             <p>الحي</p>
-            <p>الموقع الجغرافي</p>
+            <p>رقم المستشفى</p>
+
           </div>
           <div className='flex flex-col gap-5'>
             <p>{hospital.hospital.name}</p>
             <p>{hospital.hospital.city}</p>
             <p>{hospital.hospital.district}</p>
-            <a
-            className='text-blue-500 hover:underline'
-              target="_blank"
-              rel="noopener noreferrer"
-              href={`https://www.google.com/maps/?q=${hospital.hospital.location.lat},${hospital.hospital.location.lng}`}
-            >Open In Google Maps</a>
+            <p className='max-w-28 truncate'>{hospital.hospital._id}</p>
           </div>
         </div>
-
 
         <h4 className='mt-12 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل الموظف</h4>
         <div className='flex max-w-[300px] justify-between'>
           <div className='flex flex-col gap-5'>
-            <p>رقم المستشفى</p>
             <p>اسم الموظف</p>
             {/* <p>ايميل الموظف</p> */}
             <p>توقيت الاضافة</p>
             {/* <p>اسم الموظف</p> */}
           </div>
           <div className='flex flex-col gap-5'>
-            <p className='max-w-28 truncate'>{hospital.hospital._id}</p>
             <p>{`${hospital.hospital.createdBy.firstName} ${hospital.hospital.createdBy.lastName}`}</p>
             {/* <p className='max-w-28 truncate'>{hospital.hospital.createdBy.email}</p> */}
             <p>{new Date(hospital.hospital.createdAt).toDateString()}</p>

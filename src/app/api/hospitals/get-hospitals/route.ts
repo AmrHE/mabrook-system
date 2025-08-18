@@ -1,7 +1,6 @@
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
-import { userRoles } from "@/models/enum.constants";
 import { Hospital } from "@/models/Hospital";
 
 export async function GET(req: NextRequest) {
@@ -22,7 +21,7 @@ export async function GET(req: NextRequest) {
   }
 
   const hospitals = await Hospital
-  .find(userPayload.role === userRoles.ADMIN ? {} : {createdBy: userPayload._id} )
+  .find()
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
   .sort({ createdAt: -1 });
 

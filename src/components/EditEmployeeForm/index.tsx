@@ -23,8 +23,6 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
   const [userRole, setUserRole] = useState<userRoles | null>(null)
   const [responseMessage, setResponseMessage] = useState('');
 
-  console.log("Employee Data:", employee);
-
   useEffect(() => {
     if(employee) {
       setFirstName(employee.user.firstName);
@@ -33,8 +31,6 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
       setEmail(employee.user.email);
       setUserRole(employee.user.role);
       setPassword(employee.user.passwordHash);
-
-
     }
   }, [employee]);
   

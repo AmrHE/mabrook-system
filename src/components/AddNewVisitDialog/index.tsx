@@ -3,25 +3,24 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
+import { Check, ChevronsUpDown } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import {Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,}  from "@/components/ui/command"
+import {Popover,PopoverContent,PopoverTrigger,} from "@/components/ui/popover"
+
+type Hospital = {
+  _id: string;
+  name: string;
+};
 
 const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: string}) => {
   // State for controlled inputs
-  const [hospitalName, setHospitalName] = useState('');
-  const [city, setCity] = useState('');
-  const [district, setDistrict] = useState('');
+  const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const [open, setOpen] = useState(false) // Changed from true to false
+  const [value, setValue] = useState("")
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const router = useRouter()
 
@@ -39,6 +38,25 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
     }
   }, []);
 
+  useEffect(() => {
+    fetch('/api/hospitals/get-hospitals', {
+      method: 'GET',
+      headers: {
+        authorization: `Bearer ${userToken}`,
+      },
+    })
+      .then(response => response.json())
+      .then(data => {
+
+        console.log(data)
+        if (data.hospitals && data.hospitals.length > 0) {
+          setHospitals(data.hospitals)
+        }
+      })
+      .catch(error => console.error('Error fetching hospitals:', error));
+  }, [])
+
+
   const handleAddNewVisit = async () => {
     const res = await fetch('/api/visit/create', {
       method: 'POST',
@@ -46,9 +64,7 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
         authorization: `Bearer ${userToken}`,
       },
       body: JSON.stringify({
-        name: hospitalName,
-        district,
-        city,
+        // hospitalsId,
         shiftId,
         location,
       }),
@@ -60,55 +76,83 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
     } else {
       console.log('error', data.message);
     }
+
+    console.log({
+      shiftId,
+      location,
+      value,
+    })
   }
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button
-          size="lg"
-          className="space-x-10 py-7 bg-[#5570F1] hover:bg-[#3250e9] transition-all duration-500"
-        >
+        <Button size="lg" className="space-x-10 py-7 bg-[#5570F1] hover:bg-[#3250e9] transition-all duration-500">
           <span className="text-lg">أبدأ زيارة جديدة</span>
           <Plus />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent 
+        className="sm:max-w-md" 
+        onInteractOutside={(e) => {
+        e.preventDefault()
+      }}
+      >
         <DialogHeader>
           <DialogTitle>اضف زيارة جديدة</DialogTitle>
-          <DialogDescription>قم بأدخال بيانات المستشفى</DialogDescription>
+          <DialogDescription>قم باختيار المستشفى</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-2">
-          <Label htmlFor="hospitalName" className="sr-only">{/* TODO: add the option to select existing hospital or add new hospital and in the add new hospital part use the combobox shadcn component to select a current hospital */}
-            اسم المستشفى
-          </Label>
-          <Input
-            placeholder="اسم المستشفى"
-            id="hospitalName"
-            value={hospitalName}
-            onChange={(e) => setHospitalName(e.target.value)}
-          />
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="w-full justify-between"
+            >
+              {value
+                ? hospitals?.find((hospital) => hospital._id === value)?.name
+                : "اختر المستشفى..."}
+              <ChevronsUpDown className="opacity-50" />
+            </Button>
+          </PopoverTrigger>
 
-          <Label htmlFor="city" className="sr-only">
-            المدينة
-          </Label>
-          <Input
-            placeholder="المدينة"
-            id="city"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-          />
+          <PopoverContent 
+            className="w-full p-0 z-50" 
+            align="start"
+            side="bottom"
+            sideOffset={4}
+          >
+            <Command>
+              <CommandInput placeholder="ابحث عن المستشفى..." className="h-9" />
+              <CommandList className="max-h-60 overflow-y-auto">
+                <CommandEmpty>No hospital found.</CommandEmpty>
+                <CommandGroup>
+                  {hospitals?.map((hospital) => (
+                    <CommandItem
+                      key={hospital?._id}
+                      value={hospital?.name}
+                      onSelect={() => {
+                        setValue(hospital._id)
+                        setOpen(false)
+                      }}
+                      className="cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === hospital?._id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {hospital?.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
 
-          <Label htmlFor="district" className="sr-only">
-            الحي/المنطقة
-          </Label>
-          <Input
-            placeholder="الحي/المنطقة"
-            id="district"
-            value={district}
-            onChange={(e) => setDistrict(e.target.value)}
-          />
-        </div>
         <DialogFooter className="sm:justify-start">
           <Button type="button" className='bg-[#5570F1] hover:bg-[#5570F1]' onClick={handleAddNewVisit}>
             حفظ

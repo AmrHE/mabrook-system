@@ -6,20 +6,10 @@ const HospitalSchema = new mongoose.Schema({
     default: Date.now 
   },
 
-  visitId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Visit",
-  },
-
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-  },
-
-  location: {
-    lat: Number,
-    lng: Number,
   },
 
   name: {
