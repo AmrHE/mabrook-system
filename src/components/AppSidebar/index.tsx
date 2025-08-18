@@ -1,5 +1,5 @@
 "use client"
-import { BookUser, Contact, Home, Hospital, Settings, Users, Warehouse } from "lucide-react"
+import { BookUser, Contact, Home, Hospital, LogOut, Users, Warehouse } from "lucide-react"
 
 import {
   Sidebar,
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useEffect, useState } from "react";
 import { userRoles } from "@/models/enum.constants";
+import { useRouter } from "next/navigation";
 
 // Menu items.
 const items = [
@@ -47,14 +48,14 @@ const items = [
     url: "/moms",
     icon: Contact,
   },
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
-  },
+  // {
+  //   title: "Settings",
+  //   url: "#",
+  //   icon: Settings,
+  // },
 ]
-
-export function AppSidebar({userRole}: {userRole?: string}) {
+export function AppSidebar({ userRole }: { userRole?: string }) {
+  const router = useRouter();  
   const [dir, setDir] = useState<'ltr' | 'rtl'>('rtl');
 
 
@@ -64,6 +65,12 @@ export function AppSidebar({userRole}: {userRole?: string}) {
       setDir(direction);
     };
   }, []);
+
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" side={dir ==='ltr' ? "left" : "right"}>
@@ -86,6 +93,15 @@ export function AppSidebar({userRole}: {userRole?: string}) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )})}
+              
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild className="w-full flex items-center justify-center" >
+                    <button onClick={handleLogout} className="cursor-pointer">
+                      <LogOut />
+                      <span>Logout</span>
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
             </SidebarMenu>
             <SidebarSeparator />
           </SidebarGroupContent>
