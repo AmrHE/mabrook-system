@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (phoneNumber) user.phoneNumber = phoneNumber;
   if (email) user.email = email;
   if (userRole) user.role = userRole;
-  if (password) user.hashedPassword = password; 
+  if (password) user.passwordHash = password; 
   //   {
   //   const hashedPassword = await bcrypt.hash(password, 10);
   //   user.passwordHash = hashedPassword;

@@ -28,6 +28,7 @@ const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }>
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
   const employee = await getdEmployeeData(id, userToken);
+  console.log('employee', employee)
 
 
   return (
@@ -42,7 +43,7 @@ const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }>
         <TabsTrigger value="editEmployee" className='cursor-pointer'>تعديل البيانات</TabsTrigger>
       </TabsList>
       <TabsContent value="employeeDetails">
-        <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>بيانات الأم</h4>
+        <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>بيانات الموظف</h4>
         <div className='flex max-w-[400px] justify-between'>
           <div className='flex flex-col gap-5'>
             <p>الاسم الاول</p>
@@ -50,6 +51,7 @@ const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }>
             <p>البريد الاليكتروني</p>
             <p>رقم الهاتف</p>
             <p>الدور الوظيفي</p>
+            <p>كلمة المرور</p>
           </div>
           <div className='flex flex-col gap-5'>
             <p>{employee.user.firstName}</p>
@@ -57,6 +59,7 @@ const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }>
             <p>{employee.user.email}</p>
             <p>{employee.user.phoneNumber}</p>
             <p>{employee.user.role}</p>
+            <p>{employee.user.passwordHash}</p>
           </div>
         </div>
 

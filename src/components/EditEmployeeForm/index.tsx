@@ -18,7 +18,7 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
   const [lastName, setLastName] = useState<string|null>(null)
   const [phoneNumber, setPhoneNumber] = useState<string|null>(null)
   const [email, setEmail] = useState<string|null>(null)
-  // const [password, setPassword] = useState<string|null>(null)
+  const [password, setPassword] = useState<string|null>(null)
   const [updatedUser, setUpdatedUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<userRoles | null>(null)
   const [responseMessage, setResponseMessage] = useState('');
@@ -32,6 +32,9 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
       setPhoneNumber(employee.user.phoneNumber);
       setEmail(employee.user.email);
       setUserRole(employee.user.role);
+      setPassword(employee.user.passwordHash);
+
+
     }
   }, [employee]);
   
@@ -42,6 +45,7 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
       setPhoneNumber(updatedUser.phoneNumber);
       setEmail(updatedUser.email);
       setUserRole(updatedUser.role);
+      setPassword(updatedUser.passwordHash);
     }
   }, [updatedUser]);
 
@@ -60,7 +64,7 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
           phoneNumber,
           email,
           userRole,
-          // password
+          password
         }),
       });
 
@@ -145,7 +149,7 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
           </SelectContent>
         </Select>
 
-      {/* <Label htmlFor="password">
+      <Label htmlFor="password">
         كلمة المرور
       </Label>
       <Input
@@ -154,7 +158,6 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
         value={password? password : ''}
         onChange={(e) => setPassword(e.target.value)}
       />
-      <p className='text-sm text-red-500 -mt-4'>إذا قمت بتعديل كلمة المرور يرجى نسخها وحفظها، حيث لن تتمكن من عرضها مرة أخرى.</p> */}
 
       <div className='flex items-center justify-center w-full mt-4'>
         <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit'>تعديل الموظف</Button>
