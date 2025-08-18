@@ -64,7 +64,7 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
         authorization: `Bearer ${userToken}`,
       },
       body: JSON.stringify({
-        // hospitalsId,
+        hospitalId: value,
         shiftId,
         location,
       }),

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { initDb } from '../../../../lib/mongoose';
-import { Hospital } from '@/models/Hospital';
 import { Visit } from '@/models/Visit';
 import { User } from '@/models/User';
 import { cookies } from 'next/headers';
@@ -25,43 +24,23 @@ export async function POST(req: NextRequest) {
   }
   /***************Auth GAURD END****************/
 
-  const { name, district, city, shiftId, location } = await req.json();
-  if (!name || !district || !city || !shiftId || !location) {
+  const { hospitalId, shiftId, location } = await req.json();
+  if (!hospitalId || !shiftId || !location) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
   try {
     await initDb();
-    const existingHostpital = await Hospital.findOne({ name });
-    if (existingHostpital) {
-      return NextResponse.json({ error: 'Hostpital already exists' }, { status: 409 });
-    }
-
-    const newHospital = await Hospital.create({
-      name,
-      district,
-      city,
-      shiftId,
-      createdBy: userPayload._id,
-      location: location
-    });
-
-    if(!newHospital) {
-      return NextResponse.json({ error: 'Something Went Wrong' }, { status: 400 });
-    }
     const newVisit = await Visit.create({
       createdBy: userPayload._id,
       shiftId,
-      hospitalId: newHospital._id,
+      hospitalId: hospitalId,
       location,
     })
 
     if(!newVisit) {
       return NextResponse.json({ error: 'Something Went Wrong' }, { status: 400 });
     }
-
-    newHospital.visitId = newVisit._id
-    await newHospital.save()
 
     const user = await User.findById(userPayload._id)
     user.visits.push(newVisit._id);
@@ -71,7 +50,7 @@ export async function POST(req: NextRequest) {
   cookieStore.set('visitStatus', shiftStatus.IN_PROGRESS)
   cookieStore.set('currentVisit', newVisit._id)
 
-    return NextResponse.json({ message: 'Hospital added and visit started',visit: newVisit, hospital: newHospital }, { status: 201 });
+    return NextResponse.json({ message: 'Hospital added and visit started',visit: newVisit }, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: 'Server error', details: err },{ status: 500 });
   }
