@@ -125,7 +125,7 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
           >
             <Command>
               <CommandInput placeholder="ابحث عن المستشفى..." className="h-9" />
-              <CommandList className="max-h-60 overflow-y-auto">
+              <CommandList className="z-50">
                 <CommandEmpty>No hospital found.</CommandEmpty>
                 <CommandGroup>
                   {hospitals?.map((hospital) => (
