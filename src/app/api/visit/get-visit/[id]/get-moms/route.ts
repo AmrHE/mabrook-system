@@ -2,6 +2,7 @@ import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { Mom } from "@/models/Mom";
+import { userRoles } from "@/models/enum.constants";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
 
@@ -22,9 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
 
-  const moms = await Mom
-  .find({visitId: id} )
-  .sort({ createdAt: -1 });
+  const moms = await Mom.find(userPayload.role === userRoles.ADMIN ? {visitId: id} : {visitId: id, createdBy: userPayload._id}).sort({ createdAt: -1 });
 
   if(!moms) {
     return NextResponse.json({status: 404, message: "No moms found"})

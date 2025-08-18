@@ -40,10 +40,10 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
     <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
       <div className='flex items-center justify-between'>
         {mom && (
-          <h1 className='text-gray-800 font-bold text-3xl mb-10'>{mom.mom.name}</h1>
+          <h1 className='text-gray-800 font-bold text-3xl mb-10'>{mom?.mom?.name}</h1>
         )}
         <Button>
-          <Link href={`/moms/create?visitId=${mom.mom.visitId._id}`} >إضافة ام جديدة</Link>
+          <Link href={`/moms/create?visitId=${mom?.mom?.visitId?._id}`} >إضافة ام جديدة</Link>
         </Button>
       </div>
 
@@ -64,12 +64,12 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
             <p>اسم الموظف</p>
           </div>
           <div className='flex flex-col gap-5'>
-            <p>{mom.mom.name}</p>
-            <p>{mom.mom.nationality}</p>
+            <p>{mom?.mom?.name}</p>
+            <p>{mom?.mom?.nationality}</p>
             <p>{mom?.mom?.allowFutureCom ? "نعم" : "لا"}</p>
-            <p>{mom.mom.address}</p>
-            <p>{new Date(mom.mom.createdAt).toDateString()}</p>
-            <p>{`${mom.mom.createdBy.firstName} ${mom.mom.createdBy.lastName}`}</p>
+            <p>{mom?.mom?.address}</p>
+            <p>{new Date(mom?.mom?.createdAt).toDateString()}</p>
+            <p>{`${mom?.mom?.createdBy?.firstName} ${mom?.mom?.createdBy?.lastName}`}</p>
           </div>
         </div>
 
@@ -84,10 +84,10 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
             <p>عدد الإيناث حديثي الولادة</p>
           </div>
           <div className='flex flex-col gap-5'>
-            <p>{mom.mom.numberOfKids}</p>
-            <p>{mom.mom.numberOfMales}</p>
-            <p>{mom.mom.numberOfFemales}</p>
-            <p>{mom.mom.numberOfnewborns}</p>
+            <p>{mom?.mom?.numberOfKids}</p>
+            <p>{mom?.mom?.numberOfMales}</p>
+            <p>{mom?.mom?.numberOfFemales}</p>
+            <p>{mom?.mom?.numberOfnewborns}</p>
             {genders && (
               <>
                 <p>{genders['Male'] || 0}</p>
