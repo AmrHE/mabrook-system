@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   }
 
   const hospitals = await Hospital
-  .find()
+  .find(userPayload.role === 'admin' ? {} : { createdBy: userPayload._id })
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
   .sort({ createdAt: -1 });
 

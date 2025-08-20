@@ -29,8 +29,6 @@ const ProductSurveyForm = async({id} : {id: string}) => {
   //   (product) => product.questions && product.questions.length > 0
   // );
 
-
-  console.log({products})
   return (
     <div>
       <SurveyForm userToken={userToken} products={products.products} id={id}/>

@@ -16,9 +16,7 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
   // const [image, setImage] = useState<File | null>(null)
   const [size, setSize] = useState("");
 
-  const [totalQuantity, setTotalQuantity] = useState<number>(0);
   const [warehouseQuantity, setWarehouseQuantity] = useState<number>(0);
-  const [hospitalsQuantity, setHospitalsQuantity] = useState<number>(0);
   const [responseMessage, setResponseMessage] = useState('');
   const [updatedProduct, setUpdatedProduct] = useState<any>(null);
   
@@ -28,9 +26,7 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
       setName(product.name);
       setDescription(product.description);
       setSize(product.size);
-      setTotalQuantity(product.totalQuantity);
       setWarehouseQuantity(product.warehouseQuantity);
-      setHospitalsQuantity(product.hospitalsQuantity);
     }
   }, [product])
 
@@ -40,9 +36,7 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
       setName(updatedProduct.name);
       setDescription(updatedProduct.description);
       setSize(updatedProduct.size);
-      setTotalQuantity(updatedProduct.totalQuantity);
       setWarehouseQuantity(updatedProduct.warehouseQuantity);
-      setHospitalsQuantity(updatedProduct.hospitalsQuantity);
     }
   }, [updatedProduct])
 
@@ -59,9 +53,7 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
           name,
           description,
           size,
-          totalQuantity,
           warehouseQuantity,
-          hospitalsQuantity
         }),
       });
 
@@ -113,18 +105,6 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
         onChange={(e) => setSize(e.target.value)} 
       />
       
-      <Label htmlFor="totalQuantity">
-        اجمالي الكمية المتاحة
-      </Label>
-      <Input
-        type='number'
-        placeholder="اجمالي الكمية المتاحة"
-        id="totalQuantity"
-        required
-        value={totalQuantity}
-        onChange={(e) => setTotalQuantity(Number(e.target.value))} 
-      />
-      
       <Label htmlFor="warehouseQuantity">
         الكمية المتاحة في المستودع
       </Label>
@@ -137,17 +117,6 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
         onChange={(e) => setWarehouseQuantity(Number(e.target.value))} 
       />
       
-      <Label htmlFor="hospitalsQuantity">
-        الكمية المتاحة في المستشفيات
-      </Label>
-      <Input
-        type='number'
-        placeholder="الكمية المتاحة في المستشفيات"
-        id="hospitalsQuantity"
-        required
-        value={hospitalsQuantity}
-        onChange={(e) => setHospitalsQuantity(Number(e.target.value))} 
-      />
       <div className='flex items-center justify-center w-full mt-4'>
         <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit'>تعديل المنتج</Button>
       </div>

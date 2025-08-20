@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   
   const reqBody = await req.json()
-  const { name, description, size, totalQuantity, warehouseQuantity, hospitalsQuantity } = reqBody;
+  const { name, description, size, warehouseQuantity } = reqBody;
 
   await initDb();
   /***************ADMIN GAURD START****************/
@@ -36,20 +36,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({status: 404, message: "No product found"})
   }
 
-    if(totalQuantity < warehouseQuantity + hospitalsQuantity) {
-    return NextResponse.json({ error: "Total quantity must be greater than or equal to the sum of warehouse and hospitals quantities" }, { status: 400 });
-  }
-
-  if(totalQuantity < warehouseQuantity) {
-    return NextResponse.json({ error: "Total quantity must be greater than or equal to the warehouse quantity" }, { status: 400 });
-  }
-
   if (name) product.name = name;
   if (description) product.description = description;
   if (size) product.size = size;
-  if (totalQuantity) product.totalQuantity = totalQuantity;
   if (warehouseQuantity) product.warehouseQuantity = warehouseQuantity;
-  if (hospitalsQuantity) product.hospitalsQuantity = hospitalsQuantity;
+  
+  product.totalQuantity = product.hospitalsQuantity + product.warehouseQuantity;
+
+
+  
   
 
   product.updatedAt = new Date();

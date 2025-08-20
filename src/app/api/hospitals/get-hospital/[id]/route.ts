@@ -26,8 +26,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const hospital = await Hospital
   .findById(id)
-  .populate('visitId')
-  .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
+  .populate({
+    path: 'createdBy', 
+    model: 'User', 
+    select: 'email firstName lastName'
+  })
+  .populate({
+    path: 'productStocks.product',
+    model: 'Product',
+    select: 'name size'
+  });
 
   if(userPayload.role !== userRoles.ADMIN && userPayload._id !== hospital?.createdBy._id.toString()) {
     return NextResponse.json({status: 403, message: "You are not authorized to view this hospital"}, { status: 403 });

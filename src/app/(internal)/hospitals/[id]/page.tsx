@@ -7,6 +7,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import HospitalStockDetails from '@/components/HospitalStockDetails';
 
 async function getHospitalData(id: string, userToken: any) {
   const headersList = await headers();
@@ -30,6 +31,8 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
   const { id } = await params;
   const hospital = await getHospitalData(id, userToken);
 
+  console.log({hospital})
+
 
   return (
     <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
@@ -40,7 +43,7 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
       <Tabs dir='rtl' defaultValue="hospitalDetails" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="hospitalDetails" className='cursor-pointer'>تفاصيل المستشفى</TabsTrigger>
-        {/* <TabsTrigger value="productDetails" className='cursor-pointer'>تفاصيل المنتجات</TabsTrigger> */} {/*TODO: add products & stock details tab*/}
+        <TabsTrigger value="productDetails" className='cursor-pointer'>تفاصيل المنتجات</TabsTrigger> {/*TODO: add products & stock details tab*/}
       </TabsList>
       <TabsContent value="hospitalDetails">
         <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل المستشفى</h4>
@@ -53,10 +56,10 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
 
           </div>
           <div className='flex flex-col gap-5'>
-            <p>{hospital.hospital.name}</p>
-            <p>{hospital.hospital.city}</p>
-            <p>{hospital.hospital.district}</p>
-            <p className='max-w-28 truncate'>{hospital.hospital._id}</p>
+            <p>{hospital?.hospital?.name}</p>
+            <p>{hospital?.hospital?.city}</p>
+            <p>{hospital?.hospital?.district}</p>
+            <p className='max-w-28 truncate'>{hospital?.hospital?._id}</p>
           </div>
         </div>
 
@@ -69,15 +72,15 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
             {/* <p>اسم الموظف</p> */}
           </div>
           <div className='flex flex-col gap-5'>
-            <p>{`${hospital.hospital.createdBy.firstName} ${hospital.hospital.createdBy.lastName}`}</p>
+            <p>{`${hospital?.hospital?.createdBy.firstName} ${hospital?.hospital?.createdBy.lastName}`}</p>
             {/* <p className='max-w-28 truncate'>{hospital.hospital.createdBy.email}</p> */}
-            <p>{new Date(hospital.hospital.createdAt).toDateString()}</p>
+            <p>{new Date(hospital?.hospital?.createdAt).toDateString()}</p>
             {/* <p>{new Date(hospital.hospital.startTime).toLocaleTimeString()}</p> */}
           </div>
         </div>
       </TabsContent>
       <TabsContent value="productDetails">
-        
+        <HospitalStockDetails userToken={userToken} productStocks={hospital?.hospital?.productStocks} />
       </TabsContent>
     </Tabs>
     </div>
