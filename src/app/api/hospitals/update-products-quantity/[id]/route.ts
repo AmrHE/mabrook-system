@@ -54,7 +54,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const pidStr = productId.toString();
         const newQty = Number(quantity) || 0;
 
-        const existingStock = hospital.productStocks.find(ps => ps.product.toString() === pidStr);
+        const existingStock: { product: mongoose.Types.ObjectId; quantity: number; lastRestockedAt?: Date } | undefined = hospital.productStocks.find(
+          (ps: { product: mongoose.Types.ObjectId; quantity: number; lastRestockedAt?: Date }) => ps.product.toString() === pidStr
+        );
         const prevQty = existingStock ? (existingStock.quantity || 0) : 0;
         const delta = newQty - prevQty; // positive => hospital gained items, negative => consumption
 
