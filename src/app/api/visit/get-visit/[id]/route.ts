@@ -1,7 +1,7 @@
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
-import { userRoles } from "@/models/enum.constants";
+// import { userRoles } from "@/models/enum.constants";
 import { Visit } from "@/models/Visit";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
@@ -31,9 +31,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
 
 
-  if(userPayload.role !== userRoles.ADMIN && userPayload._id !== visit?.createdBy._id.toString()) {
-    return NextResponse.json({status: 403, message: "You are not authorized to view this visit"}, { status: 403 });
-  }
+  // if(userPayload.role !== userRoles.ADMIN && userPayload._id !== visit?.createdBy._id.toString()) {
+  //   return NextResponse.json({status: 403, message: "You are not authorized to view this visit"}, { status: 403 });
+  // }
 
   if(!visit) {
     return NextResponse.json({status: 404, message: "No visit found with the provided ID"})

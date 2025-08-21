@@ -38,8 +38,8 @@ const VisitSchema = new mongoose.Schema({
   },
 
   location: {
-    latitude: Number,
-    longitude: Number,
+    lat: Number,
+    lng: Number,
   },
   status : {
     type: String,

@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
   if (!hospitalId || !shiftId || !location) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
+  
 
   try {
     await initDb();
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
       createdBy: userPayload._id,
       shiftId,
       hospitalId: hospitalId,
-      location,
+      location: location,
     })
 
     if(!newVisit) {

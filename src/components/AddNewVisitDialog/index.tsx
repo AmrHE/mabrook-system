@@ -77,13 +77,13 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
       console.log('error', data.message);
     }
 
-    console.log({
-      shiftId,
-      location,
-      value,
-    })
   }
-
+  
+  console.log({
+    shiftId,
+    location,
+    value,
+  })
   return (
     <Dialog>
       <DialogTrigger asChild>

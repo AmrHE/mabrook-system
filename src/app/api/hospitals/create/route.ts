@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { initDb } from '../../../../lib/mongoose';
 import { Hospital } from '@/models/Hospital';
-import { userRoles } from '@/models/enum.constants';
 
 export async function POST(req: NextRequest) {
   await initDb();
 
-  /***************ADMIN GAURD START****************/
+  /***************AUTH GAURD START****************/
   const authHeader = req.headers.get('authorization');
   const userToken = authHeader?.split(' ')[1];
   if (!userToken) {
@@ -19,15 +18,10 @@ export async function POST(req: NextRequest) {
 
   const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string };
 
-  
-    if (userPayload.role !== userRoles.ADMIN){
-      return NextResponse.json({status: 403, message: "This Action is only allowed for Admins"})
-    }
-
   if (!userPayload._id) {
     return NextResponse.json({status: 400, message: 'Cannot identify the user Please re-login and try again'});
   }
-  /***************ADMIN GAURD END****************/
+  /***************AUTH GAURD END****************/
 
   const { name, district, city } = await req.json();
   if (!name || !district || !city) {

@@ -62,6 +62,8 @@ async function getMomsData(visitId: string, userToken: any) {
   const visit = await getVisitData(id, userToken);
   const moms = await getMomsData(id, userToken);
 
+  console.log('visit', visit);
+
   const processedMoms: Mom[] = [];
   if (moms.moms.length > 0) {
     moms.moms.map((mom: any) => {
@@ -101,7 +103,7 @@ async function getMomsData(visitId: string, userToken: any) {
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="visitDetails" className='cursor-pointer'>تفاصيل الزيارة</TabsTrigger>
         <TabsTrigger value="moms" className='cursor-pointer'>تفاصيل الامهات</TabsTrigger>
-        {visit.visit.status === shiftStatus.IN_PROGRESS && visit.visit.createdBy._id === userId &&(
+        {visitStatus === shiftStatus.IN_PROGRESS && visit.visit.createdBy._id === userId &&(
           <TabsTrigger value="addNewMom" className='cursor-pointer'>اضافة ام جديدة</TabsTrigger>
         )}
       </TabsList>
@@ -128,18 +130,20 @@ async function getMomsData(visitId: string, userToken: any) {
             <p>اسم المستشفى</p>
             <p>المدينة</p>
             <p>الحي</p>
-            <p>الموقع الجغرافي</p>
+            { visit.visit.location && <p>الموقع الجغرافي</p>}
           </div>
           <div className='flex flex-col gap-5'>
             <p>{visit.visit.hospitalId.name}</p>
             <p>{visit.visit.hospitalId.city}</p>
             <p>{visit.visit.hospitalId.district}</p>
-            <a
-            className='text-blue-500 hover:underline'
+            { visit.visit.location && (
+              <a
+              className='text-blue-500 hover:underline'
               target="_blank"
               rel="noopener noreferrer"
-              href={`https://www.google.com/maps/?q=${visit.visit.hospitalId.location.lat},${visit.visit.hospitalId.location.lng}`}
-            >Open In Google Maps</a>
+              href={`https://www.google.com/maps/?q=${visit?.visit?.location?.lat},${visit?.visit?.location?.lng}`}
+              >Open In Google Maps</a>
+            )}
           </div>
         </div>
 

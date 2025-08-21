@@ -1,7 +1,7 @@
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
-import { userRoles } from "@/models/enum.constants";
+// import { userRoles } from "@/models/enum.constants";
 import { Hospital } from "@/models/Hospital";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
@@ -37,9 +37,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     select: 'name size'
   });
 
-  if(userPayload.role !== userRoles.ADMIN && userPayload._id !== hospital?.createdBy._id.toString()) {
-    return NextResponse.json({status: 403, message: "You are not authorized to view this hospital"}, { status: 403 });
-  }
+  // if(userPayload.role !== userRoles.ADMIN && userPayload._id !== hospital?.createdBy._id.toString()) {
+  //   return NextResponse.json({status: 403, message: "You are not authorized to view this hospital"}, { status: 403 });
+  // }
 
   if(!hospital) {
     return NextResponse.json({status: 404, message: "No hospital found with the provided ID"})
