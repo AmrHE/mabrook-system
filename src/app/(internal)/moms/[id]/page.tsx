@@ -58,6 +58,7 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
           <div className='flex flex-col gap-5'>
             <p>الاسم</p>
             <p>الجنسية</p>
+            <p>الجوال</p>
             <p>هل ترغب في التواصل؟</p>
             <p>العنوان</p>
             <p>تاريخ التسجيل</p>
@@ -66,8 +67,9 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
           <div className='flex flex-col gap-5'>
             <p>{mom?.mom?.name}</p>
             <p>{mom?.mom?.nationality}</p>
+            <p>{mom?.mom?.phoneNumber || "لا يوجد"}</p>
             <p>{mom?.mom?.allowFutureCom ? "نعم" : "لا"}</p>
-            <p>{mom?.mom?.address}</p>
+            <p>{mom?.mom?.address || "غير متوفر"}</p>
             <p>{new Date(mom?.mom?.createdAt).toDateString()}</p>
             <p>{`${mom?.mom?.createdBy?.firstName} ${mom?.mom?.createdBy?.lastName}`}</p>
           </div>
@@ -84,10 +86,10 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
             <p>عدد الإيناث حديثي الولادة</p>
           </div>
           <div className='flex flex-col gap-5'>
-            <p>{mom?.mom?.numberOfKids}</p>
-            <p>{mom?.mom?.numberOfMales}</p>
-            <p>{mom?.mom?.numberOfFemales}</p>
-            <p>{mom?.mom?.numberOfnewborns}</p>
+            <p>{mom?.mom?.numberOfKids || 0}</p>
+            <p>{mom?.mom?.numberOfMales|| 0}</p>
+            <p>{mom?.mom?.numberOfFemales|| 0}</p>
+            <p>{mom?.mom?.numberOfnewborns|| 0}</p>
             {genders && (
               <>
                 <p>{genders['Male'] || 0}</p>

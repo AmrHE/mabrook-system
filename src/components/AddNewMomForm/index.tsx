@@ -19,10 +19,10 @@ const AddNewMomForm = ({userToken, visit}: {userToken: string | undefined, visit
   const [address, setAddress] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [allowFutureCom, setAllowFutureCom] = useState(true)
-  const [numberOfKids, setNumberOfKids] = useState<number | null>(null)
+  const [numberOfKids, setNumberOfKids] = useState<number | null>(0)
   const [numberOfnewborns, setNumberOfnewborns] = useState(0)
-  const [numberOfMales, setNumberOfMales] = useState<number | null>(null)
-  const [numberOfFemales, setNumberOfFemales] = useState<number | null>(null)
+  const [numberOfMales, setNumberOfMales] = useState<number | null>(0)
+  const [numberOfFemales, setNumberOfFemales] = useState<number | null>(0)
   const [genderOfNewborns, setGenderOfNewborns] = useState<string[]>([]);
   const [responseMessage, setResponseMessage] = useState('');
 
