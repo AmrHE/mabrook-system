@@ -1,14 +1,17 @@
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
+import { userRoles } from "@/models/enum.constants";
 import { User } from "@/models/User";
+// import bcrypt from "bcrypt";
 
-export async function GET(req: NextRequest) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
 
-
+  const { id } = await params;
+  
 
   await initDb();
-  /***************AUTH GAURD START****************/
+  /***************ADMIN GAURD START****************/
   const authHeader = req.headers.get('authorization');
   const userToken = authHeader?.split(" ")[1];
   if (!userToken){
@@ -16,23 +19,26 @@ export async function GET(req: NextRequest) {
   }
 
   const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
-  /***************AUTH GAURD END****************/
+
+  if (userPayload.role !== userRoles.ADMIN){
+    return NextResponse.json({status: 403, message: "This Action is only allowed for Admins"})
+  }
+  /***************ADMIN GAURD END****************/
 
   if (!userPayload) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
 
-  const user = await User
-  .findOne({ _id: userPayload._id })
-  .sort({ createdAt: -1 });
+  const user = await User.findById(id)
 
   if(!user) {
     return NextResponse.json({status: 404, message: "No user found"})
   }
 
-  if(!user.isActive) {
-    return NextResponse.json({status: 405, message: "User has been deleted"})
-  }
+  user.isActive = false;
 
-  return NextResponse.json({ message: "User fetched successfully", user }, { status: 200 });
+  user.deletedAt = new Date();
+  await user.save();
+
+  return NextResponse.json({ message: "User updated successfully", user }, { status: 200 });
 }

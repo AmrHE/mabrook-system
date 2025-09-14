@@ -18,7 +18,11 @@ export async function POST(req: NextRequest) {
 
   if (user === null) {
     return NextResponse.json({status: 404, message: "this email cannot be found"})
-    
+  }
+  
+  
+  if(user.isActive === false) {
+    return NextResponse.json({status: 404, message: "this account has been deleted"})
   }
 
   // const isMatching = await bcrypt.compare(password, user.passwordHash as string);

@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   }
 
   const users = await User
-  .find()
+  .find({isActive: true})
   .sort({ createdAt: -1 });
 
   if(!users) {

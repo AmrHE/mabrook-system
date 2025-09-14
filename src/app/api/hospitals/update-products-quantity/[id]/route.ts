@@ -11,7 +11,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const reqBody = await req.json();
   const { hospitalQuantities } = reqBody;
-  console.log('hospitalQuantities', hospitalQuantities)
 
   await initDb();
 

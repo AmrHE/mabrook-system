@@ -34,6 +34,11 @@ const UserSchema = new mongoose.Schema({
     default: Date.now 
   },
 
+  deletedAt: { 
+    type: Date, 
+    default: Date.now 
+  },
+
   phoneNumber: String,
   shifts: {
     type: [mongoose.Schema.Types.ObjectId],
@@ -50,7 +55,13 @@ const UserSchema = new mongoose.Schema({
   isOnShift: {
     type: Boolean,
     default: false
-  }
+  },
+
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+
 });
 
 export const User = mongoose.models.User || mongoose.model("User", UserSchema);

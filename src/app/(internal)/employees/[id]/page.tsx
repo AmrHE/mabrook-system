@@ -8,33 +8,40 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import EditEmployeeForm from '@/components/EditEmployeeForm';
+import DeleteEmployeeButton from '@/components/DeleteEmployeeButton';
+import { userRoles } from '@/models/enum.constants';
 
 async function getdEmployeeData(id: string, userToken: any) {
   const headersList = await headers();
   const host = headersList.get('host');
 
-const res = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/user/get-user/${id}`, {
-  cache: 'no-store',
-  headers: {
-    'Content-Type': 'application/json',
-    authorization: `Bearer ${userToken}`,
-  },
-});
-return res.json();
+  const res = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/user/get-user/${id}`, {
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+      authorization: `Bearer ${userToken}`,
+    },
+  });
+  return res.json();
 }
 
 const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
+  const userRole = cookieStore.get('role')?.value;
   const employee = await getdEmployeeData(id, userToken);
-  console.log('employee', employee)
-
 
   return (
     <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
       {employee && (
-        <h1 className='text-gray-800 font-bold text-3xl mb-10'>تفاصيل الموظف</h1>
+        <div className='flex items-center justify-between p-4 rounded-3xl mb-10'>
+          <h1 className='text-gray-800 font-bold text-3xl mb-10'>تفاصيل الموظف</h1>
+
+          {userRole === userRoles.ADMIN && (
+            <DeleteEmployeeButton id={id} userToken={userToken!} />
+          )}
+        </div>
       )}
 
       <Tabs dir='rtl' defaultValue="employeeDetails" className="w-full">
