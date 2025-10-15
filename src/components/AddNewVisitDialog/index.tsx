@@ -48,7 +48,6 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
       .then(response => response.json())
       .then(data => {
 
-        console.log(data)
         if (data.hospitals && data.hospitals.length > 0) {
           setHospitals(data.hospitals)
         }
@@ -79,11 +78,6 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
 
   }
   
-  console.log({
-    shiftId,
-    location,
-    value,
-  })
   return (
     <Dialog>
       <DialogTrigger asChild>

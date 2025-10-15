@@ -63,8 +63,6 @@ const HospitalStockDetails = ({
         throw new Error(data.message || 'Something went wrong');
       }
 
-      // success handling...
-      console.log("Updated successfully:", data);
     } catch (error: any) {
       console.error("Error updating:", error.message);
     }

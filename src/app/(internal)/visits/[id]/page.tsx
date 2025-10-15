@@ -62,8 +62,6 @@ async function getMomsData(visitId: string, userToken: any) {
   const visit = await getVisitData(id, userToken);
   const moms = await getMomsData(id, userToken);
 
-  console.log('visit', visit);
-
   const processedMoms: Mom[] = [];
   if (moms.moms.length > 0) {
     moms.moms.map((mom: any) => {

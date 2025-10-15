@@ -214,17 +214,17 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
       {/* 🖊️ Signature Section */}
       <div className="mt-6">
         <Label className="mb-2 block">توقيع الام (للموافقة على السياسة)</Label>
-        <div className="border rounded-md p-2 bg-white">
+        {/* <div className="border rounded-md p-2 bg-white"> */}
           <SignatureCanvas
             ref={sigCanvas}
             penColor="black"
             canvasProps={{
-              width: 400,
+              width: 375,
               height: 200,
               className: 'signatureCanvas bg-white border border-gray-300 rounded-md w-full',
             }}
           />
-        </div>
+        {/* </div> */}
         <div className="flex justify-between mt-2">
           <Button
             type="button"
@@ -236,8 +236,6 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
           <Button
             type="button"
             onClick={() =>{
-              console.log(sigCanvas)
-              console.log(sigCanvas.current?.getTrimmedCanvas())
               setSignatureData(sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png') || null)
             }}
           >
@@ -250,7 +248,7 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
             <Image
               src={signatureData}
               alt="Saved signature preview"
-              className="border mt-1 rounded-md"
+              className="w-full border mt-1 rounded-md"
               width={200}
               height={200}
             />

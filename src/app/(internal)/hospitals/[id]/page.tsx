@@ -31,9 +31,6 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
   const { id } = await params;
   const hospital = await getHospitalData(id, userToken);
 
-  console.log({hospital})
-
-
   return (
     <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
       {hospital && (
