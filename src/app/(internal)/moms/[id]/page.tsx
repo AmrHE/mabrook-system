@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import ProductSurveyForm from '@/components/ProductSurveyForm';
+import Image from 'next/image';
 
 async function getMomData(id: string, userToken: any) {
   const headersList = await headers();
@@ -98,6 +99,13 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
             )}
           </div>
         </div>
+
+        {mom?.mom?.signature && (
+          <>
+            <h4 className='mt-12 mb-4 font-semibold text-gray-700 text-xl'>توقيع الام</h4>
+            <Image src={mom?.mom?.signature} alt="signature" width={375} height={200} className='border'/>
+          </>
+        )}
       </TabsContent>
       <TabsContent value="productDetails">
         <ProductSurveyForm id={id}/>

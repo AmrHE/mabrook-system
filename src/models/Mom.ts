@@ -36,6 +36,12 @@ const MomSchema = new mongoose.Schema({
   numberOfMales: Number,
 
   numberOfFemales: Number,
+  
+  signature: {
+    type: String,
+    default: '',
+    required: false,
+  },
 
   genderOfNewborns: [String],
 

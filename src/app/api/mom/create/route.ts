@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   }
   /***************Auth GAURD END****************/
 
-  const { name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId, phoneNumber, allowFutureCom } = await req.json();
+  const { name, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId, phoneNumber, allowFutureCom, signature } = await req.json();
   if ( !name ) {
     return NextResponse.json({ error: 'Must fill in the name' }, { status: 400 });
   }
@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
       genderOfNewborns,
       visitId,
       phoneNumber,
-      allowFutureCom
+      allowFutureCom,
+      signature,
     })
 
     if(!newMom) {

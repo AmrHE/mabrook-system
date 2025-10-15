@@ -1,19 +1,22 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
+ 
+ 
 'use client'
-import React, { useState } from 'react'
+
+import React, { useState, useRef } from 'react'
 import { Label } from '../ui/label'
 import { Input } from '../ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { useParams, useRouter } from 'next/navigation';
-import { Button } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import { useParams, useRouter } from 'next/navigation'
+import { Button } from '../ui/button'
+import { Checkbox } from '../ui/checkbox'
+import SignatureCanvas from 'react-signature-canvas'
+import Image from 'next/image'
 
-
-const AddNewMomForm = ({userToken, visit}: {userToken: string | undefined, visit?: string | undefined}) => {
+const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, visit?: string | undefined }) => {
   const router = useRouter()
-  const params = useParams();
-  const visitId = params.id as string ? params.id : visit;
+  const params = useParams()
+  const visitId = (params.id as string) || visit
+
   const [name, setName] = useState('')
   const [nationality, setNationality] = useState('')
   const [address, setAddress] = useState('')
@@ -23,61 +26,92 @@ const AddNewMomForm = ({userToken, visit}: {userToken: string | undefined, visit
   const [numberOfnewborns, setNumberOfnewborns] = useState(0)
   const [numberOfMales, setNumberOfMales] = useState<number | null>(0)
   const [numberOfFemales, setNumberOfFemales] = useState<number | null>(0)
-  const [genderOfNewborns, setGenderOfNewborns] = useState<string[]>([]);
-  const [responseMessage, setResponseMessage] = useState('');
+  const [genderOfNewborns, setGenderOfNewborns] = useState<string[]>([])
+  const [signatureData, setSignatureData] = useState<string | null>(null)
+  const [responseMessage, setResponseMessage] = useState('')
+
+  const sigCanvas = useRef<SignatureCanvas>(null)
 
   const handleGenderChange = (index: number, value: string) => {
-    const updatedGenders = [...genderOfNewborns];
-    updatedGenders[index] = value;
-    setGenderOfNewborns(updatedGenders);
-  };
+    const updatedGenders = [...genderOfNewborns]
+    updatedGenders[index] = value
+    setGenderOfNewborns(updatedGenders)
+  }
 
   const handleNewbornCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const count = parseInt(e.target.value) || 0;
-    setNumberOfnewborns(count);
-    setGenderOfNewborns(Array(count).fill('')); // reset or resize genders array
+    const count = parseInt(e.target.value) || 0
+    setNumberOfnewborns(count)
+    setGenderOfNewborns(Array(count).fill(''))
   }
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    try {
-      const res = await fetch('/api/mom/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          authorization: `Bearer ${userToken}`,
-        },
-        body: JSON.stringify({
-          visitId,
-          name,
-          nationality,
-          address,
-          numberOfKids,
-          numberOfnewborns,
-          numberOfMales,
-          numberOfFemales,
-          genderOfNewborns,
-          phoneNumber,
-          allowFutureCom
-        }),
-      });
 
-      const data = await res.json();
+  const clearSignature = () => {
+    sigCanvas.current?.clear()
+    setSignatureData(null)
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
+    const signatureImage = sigCanvas.current?.isEmpty()
+      ? null
+      : sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png')
+
+    let uploadedSignatureUrl;
+
+    if (signatureImage && !uploadedSignatureUrl) {
+      const uploadRes = await fetch('/api/cloudinary/upload-signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signature: signatureImage }),
+      })
+
+      const uploadData = await uploadRes.json()
+      if (uploadRes.ok) {
+        uploadedSignatureUrl = uploadData.url
+      } else {
+        throw new Error(uploadData.error || 'Failed to upload signature')
+      }
+    }
+
+    // Then submit mom data with signature URL
+    const res = await fetch('/api/mom/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        authorization: `Bearer ${userToken}`,
+      },
+      body: JSON.stringify({
+        visitId,
+        name,
+        nationality,
+        address,
+        numberOfKids,
+        numberOfnewborns,
+        numberOfMales,
+        numberOfFemales,
+        genderOfNewborns,
+        phoneNumber,
+        allowFutureCom,
+        signature: uploadedSignatureUrl, // ✅ save Cloudinary URL instead of base64
+      }),
+    })
+
+      const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        throw new Error(data.message || 'Something went wrong')
       }
+
       router.push(`/moms/${data.mom._id}`)
-      setResponseMessage('Mom submitted successfully!');
-    } catch (error: any) {
-      setResponseMessage(`Error: ${error.message}`);
-    }
-  };
+      setResponseMessage('Mom submitted successfully!')
+    // } catch (error: any) {
+    //   setResponseMessage(`Error: ${error.message}`)
+    // }
+  }
 
   return (
     <form className='flex flex-col gap-5 lg:max-w-1/3' onSubmit={handleSubmit}>
-      <Label htmlFor="name">
-        الاسم
-      </Label>
+      <Label htmlFor="name">الاسم</Label>
       <Input
         placeholder="اسم الام"
         id="name"
@@ -85,10 +119,8 @@ const AddNewMomForm = ({userToken, visit}: {userToken: string | undefined, visit
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      
-      <Label htmlFor="phoneNumber">
-        رقم الجوال
-      </Label>
+
+      <Label htmlFor="phoneNumber">رقم الجوال</Label>
       <Input
         placeholder="رقم الجوال"
         id="phoneNumber"
@@ -106,9 +138,7 @@ const AddNewMomForm = ({userToken, visit}: {userToken: string | undefined, visit
         <Label htmlFor="allowFutureCom">هل ترغبي في التواصل مستقبلياً؟</Label>
       </div>
 
-      <Label htmlFor="nationality">
-        الجنسية
-      </Label>
+      <Label htmlFor="nationality">الجنسية</Label>
       <Input
         placeholder="جنسية الام"
         id="nationality"
@@ -117,9 +147,7 @@ const AddNewMomForm = ({userToken, visit}: {userToken: string | undefined, visit
         onChange={(e) => setNationality(e.target.value)}
       />
 
-      <Label htmlFor="address">
-        العنوان
-      </Label>
+      <Label htmlFor="address">العنوان</Label>
       <Input
         placeholder="عنوان الام"
         id="address"
@@ -128,20 +156,16 @@ const AddNewMomForm = ({userToken, visit}: {userToken: string | undefined, visit
         onChange={(e) => setAddress(e.target.value)}
       />
 
-      <Label htmlFor="numberOfKids">
-        عدد الاطفال
-      </Label>
+      <Label htmlFor="numberOfKids">عدد الاطفال</Label>
       <Input
         placeholder="عدد الاطفال"
         id="numberOfKids"
         required
-        value={numberOfKids !== null ? numberOfKids : ''}
+        value={numberOfKids ?? ''}
         onChange={(e) => setNumberOfKids(e.target.value === '' ? null : Number(e.target.value))}
       />
 
-      <Label htmlFor="numberOfnewborns">
-        عدد الاطفال حديثي الولادة
-      </Label>
+      <Label htmlFor="numberOfnewborns">عدد الاطفال حديثي الولادة</Label>
       <Input
         placeholder="عدد الاطفال حديثي الولادة"
         id="numberOfnewborns"
@@ -150,28 +174,23 @@ const AddNewMomForm = ({userToken, visit}: {userToken: string | undefined, visit
         onChange={handleNewbornCountChange}
       />
 
-      <Label htmlFor="numberOfMales">
-        عدد الاطفال الذكور
-      </Label>
+      <Label htmlFor="numberOfMales">عدد الاطفال الذكور</Label>
       <Input
         placeholder="عدد الاطفال الذكور"
         id="numberOfMales"
         required
-        value={numberOfMales !== null ? numberOfMales : ''}
+        value={numberOfMales ?? ''}
         onChange={(e) => setNumberOfMales(e.target.value === '' ? null : Number(e.target.value))}
       />
 
-      <Label htmlFor="numberOfFemales">
-        عدد الاطفال الاناث
-      </Label>
+      <Label htmlFor="numberOfFemales">عدد الاطفال الاناث</Label>
       <Input
         placeholder="عدد الاطفال الاناث"
         id="numberOfFemales"
         required
-        value={numberOfFemales !== null ? numberOfFemales : ''}
+        value={numberOfFemales ?? ''}
         onChange={(e) => setNumberOfFemales(e.target.value === '' ? null : Number(e.target.value))}
       />
-
 
       {Array.from({ length: numberOfnewborns }, (_, index) => (
         <div key={index} className='flex items-center gap-12'>
@@ -191,9 +210,63 @@ const AddNewMomForm = ({userToken, visit}: {userToken: string | undefined, visit
           </Select>
         </div>
       ))}
-      <div className='flex items-center justify-center w-full mt-4'>
-        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit'>اضافة الام</Button>
+
+      {/* 🖊️ Signature Section */}
+      <div className="mt-6">
+        <Label className="mb-2 block">توقيع الام (للموافقة على السياسة)</Label>
+        <div className="border rounded-md p-2 bg-white">
+          <SignatureCanvas
+            ref={sigCanvas}
+            penColor="black"
+            canvasProps={{
+              width: 400,
+              height: 200,
+              className: 'signatureCanvas bg-white border border-gray-300 rounded-md w-full',
+            }}
+          />
+        </div>
+        <div className="flex justify-between mt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={clearSignature}
+          >
+            مسح التوقيع
+          </Button>
+          <Button
+            type="button"
+            onClick={() =>{
+              console.log(sigCanvas)
+              console.log(sigCanvas.current?.getTrimmedCanvas())
+              setSignatureData(sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png') || null)
+            }}
+          >
+            حفظ التوقيع
+          </Button>
+        </div>
+        {signatureData && (
+          <div className="mt-3">
+            <Label>التوقيع المحفوظ:</Label>
+            <Image
+              src={signatureData}
+              alt="Saved signature preview"
+              className="border mt-1 rounded-md"
+              width={200}
+              height={200}
+            />
+          </div>
+        )}
       </div>
+
+      <div className='flex items-center justify-center w-full mt-4'>
+        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit'>
+          اضافة الام
+        </Button>
+      </div>
+
+      {responseMessage && (
+        <p className="text-center text-sm mt-2">{responseMessage}</p>
+      )}
     </form>
   )
 }
