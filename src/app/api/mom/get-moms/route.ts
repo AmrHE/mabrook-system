@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   }
 
   const moms = await Mom
-  .find(userPayload.role === userRoles.ADMIN ? {} : {createdBy: userPayload._id})
+  .find(userPayload.role === userRoles.ADMIN ? {isActive: true} : {createdBy: userPayload._id, isActive: true})
   .sort({ createdAt: -1 });
 
   if(!moms) {

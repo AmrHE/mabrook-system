@@ -46,6 +46,16 @@ const VisitSchema = new mongoose.Schema({
     enum: shiftStatus, 
     default: shiftStatus.IN_PROGRESS, 
   },
+
+    isActive: {
+    type: Boolean,
+    default: true,
+  },
+
+  deletedAt: { 
+    type: Date, 
+    default: Date.now 
+  },
 });
 
 export const Visit = mongoose.models.Visit || mongoose.model('Visit', VisitSchema);

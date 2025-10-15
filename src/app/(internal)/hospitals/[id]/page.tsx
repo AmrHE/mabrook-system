@@ -8,6 +8,8 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import HospitalStockDetails from '@/components/HospitalStockDetails';
+import { userRoles } from '@/models/enum.constants';
+import DeleteHospitalButton from '@/components/DeleteHospitalButton';
 
 async function getHospitalData(id: string, userToken: any) {
   const headersList = await headers();
@@ -27,6 +29,8 @@ return res.json();
 const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
+  const userRole = cookieStore.get('role')?.value;
+
 
   const { id } = await params;
   const hospital = await getHospitalData(id, userToken);
@@ -40,7 +44,7 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
       <Tabs dir='rtl' defaultValue="hospitalDetails" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="hospitalDetails" className='cursor-pointer'>تفاصيل المستشفى</TabsTrigger>
-        <TabsTrigger value="productDetails" className='cursor-pointer'>تفاصيل المنتجات</TabsTrigger> {/*TODO: add products & stock details tab*/}
+        <TabsTrigger value="productDetails" className='cursor-pointer'>تفاصيل المنتجات</TabsTrigger>
       </TabsList>
       <TabsContent value="hospitalDetails">
         <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل المستشفى</h4>
@@ -75,6 +79,14 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
             {/* <p>{new Date(hospital.hospital.startTime).toLocaleTimeString()}</p> */}
           </div>
         </div>
+
+        <div className='mt-10'>
+          {userRole === userRoles.ADMIN && (
+            <DeleteHospitalButton id={id} userToken={userToken!} />
+          )}
+        </div>
+
+        
       </TabsContent>
       <TabsContent value="productDetails">
         <HospitalStockDetails userToken={userToken} productStocks={hospital?.hospital?.productStocks} />

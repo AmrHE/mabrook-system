@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import ProductSurveyForm from '@/components/ProductSurveyForm';
 import Image from 'next/image';
+import { userRoles } from '@/models/enum.constants';
+import DeletedMomButton from '@/components/DeleteMomButton';
 
 async function getMomData(id: string, userToken: any) {
   const headersList = await headers();
@@ -29,6 +31,7 @@ return res.json();
 const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
+  const userRole = cookieStore.get('role')?.value;
 
   const { id } = await params;
   const mom = await getMomData(id, userToken);
@@ -106,6 +109,12 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
             <Image src={mom?.mom?.signature} alt="signature" width={375} height={200} className='border'/>
           </>
         )}
+
+        <div className='mt-10'>
+          {userRole === userRoles.ADMIN && (
+            <DeletedMomButton id={id} userToken={userToken!} />
+          )}
+        </div>
       </TabsContent>
       <TabsContent value="productDetails">
         <ProductSurveyForm id={id}/>

@@ -8,10 +8,11 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import AddNewMomForm from '@/components/AddNewMomForm';
-import { shiftStatus } from '@/models/enum.constants';
+import { shiftStatus, userRoles } from '@/models/enum.constants';
 import { ClientDataTable } from './client-data-table';
 import { columns } from './columns';
 import EndVisitButton from '@/components/EndVisitButton';
+import DeleteVisitButton from '@/components/DeleteVisitButton';
 
 
 type Mom = {
@@ -29,6 +30,7 @@ const SingleVisitPage = async ({ params }: { params: Promise<{ id: string }> }) 
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
   const userId = cookieStore.get('userId')?.value;
+  const userRole = cookieStore.get('role')?.value;
   const visitStatus = cookieStore.get('visitStatus')?.value;
   const headersList = await headers();
   const host = headersList.get('host');
@@ -143,6 +145,13 @@ async function getMomsData(visitId: string, userToken: any) {
               >Open In Google Maps</a>
             )}
           </div>
+        </div>
+
+        
+        <div className='mt-10'>
+          {userRole === userRoles.ADMIN && (
+            <DeleteVisitButton id={id} userToken={userToken!} />
+          )}
         </div>
 
       </TabsContent>

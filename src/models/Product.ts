@@ -6,6 +6,15 @@ const ProductSchema = new mongoose.Schema({
     default: Date.now 
   },
 
+  isActive: {
+  type: Boolean,
+  default: true,
+},
+ deletedAt: { 
+    type: Date, 
+    default: Date.now 
+  },
+
   name: String,
   description: String,
   imageUrl: String,

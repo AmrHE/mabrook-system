@@ -45,6 +45,16 @@ const MomSchema = new mongoose.Schema({
 
   genderOfNewborns: [String],
 
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+
+  deletedAt: { 
+    type: Date, 
+    default: Date.now 
+  },
+
   survey: [{
     product: { 
       type: mongoose.Schema.Types.ObjectId, 

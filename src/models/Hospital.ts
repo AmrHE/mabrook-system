@@ -17,6 +17,16 @@ const HospitalSchema = new mongoose.Schema({
     unique: true,
   },
 
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+
+  deletedAt: { 
+    type: Date, 
+    default: Date.now 
+  },
+
   city: String,
 
   district: String,
