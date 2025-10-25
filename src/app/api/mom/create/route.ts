@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       nationality,
       address,
       numberOfKids: numberOfKids|| numberOfnewborns || 0,
-      numberOfnewborns,
+      numberOfnewborns: numberOfnewborns || 0,
       numberOfMales: numberOfMales || 0,
       numberOfFemales: numberOfFemales || 0,
       genderOfNewborns,

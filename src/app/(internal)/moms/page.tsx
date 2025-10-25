@@ -12,6 +12,7 @@ type Mom = {
   numberOfnewborns: number;
   numberOfMales: number;
   numberOfFemales: number;
+  hospitalName: string;
 }
 
 const MomsPage = async () => {
@@ -44,6 +45,7 @@ const MomsPage = async () => {
         numberOfnewborns: mom.numberOfnewborns,
         numberOfMales: mom.numberOfMales,
         numberOfFemales: mom.numberOfFemales,
+        hospitalName: mom.visitId.hospitalId.name,
       });
     });
   }

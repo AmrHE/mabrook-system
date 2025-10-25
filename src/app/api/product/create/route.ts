@@ -45,17 +45,17 @@ export async function POST(req: NextRequest) {
     }
 
     await Hospital.updateMany(
-          {},
-          {
-            $push: {
-              productStocks: {
-                product: newProduct._id,
-                quantity: 0,
-                lastRestockedAt: null,
-              },
-            },
-          }
-        );
+      {},
+      {
+        $push: {
+          productStocks: {
+            product: newProduct._id,
+            quantity: 0,
+            lastRestockedAt: null,
+          },
+        },
+      }
+    );
     return NextResponse.json({ message: "Product created", product: newProduct }, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: "Server error", details: err }, { status: 500 });

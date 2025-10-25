@@ -12,11 +12,11 @@ type Employee = {
   email: string;
   phoneNumber: string;
   role: string;
-  isOnShift: boolean; 
+  isOnShift: boolean;
+  visitCount: number;
 }
 
 const UsersPage = async () => {
-
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
   const headersList = await headers();
@@ -45,6 +45,7 @@ const UsersPage = async () => {
         phoneNumber: employee.phoneNumber,
         role: employee.role,
         isOnShift: employee.isOnShift,
+        visitCount: employee.visits.filter((visit: { isActive: boolean; }) => visit.isActive === true).length,
       });
     });
   }

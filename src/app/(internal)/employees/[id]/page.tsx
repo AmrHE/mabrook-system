@@ -55,7 +55,7 @@ const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }>
           <div className='flex flex-col gap-5'>
             <p>الاسم الاول</p>
             <p>الاسم الاخير</p>
-            <p>البريد الاليكتروني</p>
+            <p>البريد الإلكتروني</p>
             <p>رقم الهاتف</p>
             <p>الدور الوظيفي</p>
             <p>كلمة المرور</p>
@@ -71,7 +71,7 @@ const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }>
         </div>
 
         <h4 className='mt-12 mb-4 font-semibold text-gray-700 text-xl'>بيانات التسجيل</h4>
-        <div className='flex max-w-[300px] justify-between'>
+        <div className='flex max-w-[320px] justify-between'>
           <div className='flex flex-col gap-5'>
             <p>تاريخ إنشاء الحساب</p>
             <p>اخر تعديل</p>
@@ -80,10 +80,24 @@ const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }>
             <p>عدد الدوامات المسجلة</p>
           </div>
           <div className='flex flex-col gap-5'>
-            <p>{new Date(employee.user.createdAt).toDateString()}</p>
-            <p>{new Date(employee.user.updatedAt).toDateString()}</p>
-            <p>{new Date(employee.user.lastLogin).toDateString()}</p>
-            <p>{employee.user.visits.length}</p>
+            <p>
+              {new Date(employee.user.createdAt).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </p>
+            <p>{new Date(employee.user.updatedAt).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}</p>
+            <p>{new Date(employee.user.lastLogin).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}</p>
+            <p>{employee.user.visits.filter((visit: { isActive: boolean; }) => visit.isActive === true).length}</p>
             <p>{employee.user.shifts.length}</p>
           </div>
         </div>

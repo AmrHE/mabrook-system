@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Label } from '../ui/label'
 import { Input } from '../ui/input'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { Button } from '../ui/button'
 
 const AddQuestionsForm = ({ userToken, product }: { userToken: string | undefined, product: any }) => {
@@ -11,6 +11,9 @@ const AddQuestionsForm = ({ userToken, product }: { userToken: string | undefine
   const productId = params.id as string;
 
   const [questions, setQuestions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false)
+
+  const router = useRouter();
 
   // Initialize with existing product questions
   useEffect(() => {
@@ -35,6 +38,7 @@ const AddQuestionsForm = ({ userToken, product }: { userToken: string | undefine
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    setIsLoading(true)
     e.preventDefault();
     try {
       const res = await fetch(`/api/product/add-questions/${productId}`, {
@@ -48,8 +52,11 @@ const AddQuestionsForm = ({ userToken, product }: { userToken: string | undefine
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        alert('حدث خطأ ما أثناء إضافة الأسئلة. الرجاء المحاولة مرة أخرى.');
+        setIsLoading(false)
       }
+      alert('تمت إضافة الأسئلة بنجاح!');
+      router.push(`/products/${productId}`);
       console.log("Questions added successfully:", data);
     } catch (error) {
       console.error("Error adding questions:", error);
@@ -87,7 +94,9 @@ const AddQuestionsForm = ({ userToken, product }: { userToken: string | undefine
         </Button>
       </div>
 
-      <Button type='submit'>حفظ التعديلات</Button>
+      <Button type='submit' disabled={isLoading}>
+        { isLoading ? 'جاري الحفظ...' : 'احفظ الأسئلة' }
+      </Button>
     </form>
   )
 }

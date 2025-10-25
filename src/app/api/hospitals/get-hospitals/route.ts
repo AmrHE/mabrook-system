@@ -2,6 +2,7 @@ import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { Hospital } from "@/models/Hospital";
+// import { Product } from "@/models/Product";
 
 export async function GET(req: NextRequest) {
   await initDb();
@@ -24,6 +25,38 @@ export async function GET(req: NextRequest) {
   .find({ isActive: true })
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
   .sort({ createdAt: -1 });
+
+  // const allProducts = await Product.find({});
+  // for (const hospital of hospitals) {
+  //     const existingProductIds = (hospital.productStocks || []).map(
+  //       stock => stock.product.toString()
+  //     );
+  //     // Find products that are missing from this hospital
+  //     const missingProducts = allProducts.filter(
+  //       product => !existingProductIds.includes(product._id.toString())
+  //     );
+  //     if (missingProducts.length > 0) {
+  //       console.log(`Hospital ${hospital.name}: Adding ${missingProducts.length} missing products`);
+  //       // Add missing products
+  //       await Hospital.updateOne(
+  //         { _id: hospital._id },
+  //         {
+  //           $push: {
+  //             productStocks: {
+  //               $each: missingProducts.map(product => ({
+  //                 product: product._id,
+  //                 quantity: 0,
+  //                 lastRestockedAt: null
+  //               }))
+  //             }
+  //           }
+  //         }
+  //       );
+  //     } else {
+  //       console.log(`Hospital ${hospital.name}: Already in sync`);
+  //     }
+  //   }
+
 
   if(!hospitals) {
     return NextResponse.json({status: 404, message: "No hospitals found"})

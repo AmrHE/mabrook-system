@@ -22,6 +22,8 @@ export async function GET(req: NextRequest) {
 
   const moms = await Mom
   .find(userPayload.role === userRoles.ADMIN ? {isActive: true} : {createdBy: userPayload._id, isActive: true})
+  .populate({path: 'visitId', populate: { path: 'hospitalId', model: 'Hospital'}})
+  .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
   .sort({ createdAt: -1 });
 
   if(!moms) {

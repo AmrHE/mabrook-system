@@ -76,11 +76,19 @@ const SingleProductPage = async ({ params }: { params: Promise<{ id: string }> }
           </div>
           <div className='flex items-start gap-20'>
             <p>تاريخ الاضافة</p>
-            <p className='truncate'>{new Date(product.product.createdAt).toDateString()}</p>
+            <p className='truncate'>{new Date(product.product.createdAt).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}</p>
           </div>
           <div className='flex items-start gap-20'>
             <p>تاريخ اخر تعديل</p>
-            <p className='truncate'>{new Date(product.product.updatedAt).toDateString()}</p>
+            <p className='truncate'>{new Date(product.product.updatedAt).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}</p>
           </div>
         </div>
 

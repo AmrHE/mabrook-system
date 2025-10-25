@@ -31,21 +31,25 @@ const Login = () => {
       const data = await res.json()
 
       if (data.status !== 200) {
+        alert(data.message || 'Login failed');
+        setLoading(false)
         setError(data.message || 'Login failed')
       } else {
         // Handle successful login (e.g., redirect or store token)
         router.push('/')
       }
     } catch (err) {
+      alert("حدث خطأ ما أثناء تسجيل الدخول. الرجاء المحاولة مرة أخرى.");
+      setLoading(false)
       console.error('Error during login:', err)
       if (err instanceof Error) {
         setError(err.message)
       } else {
         setError('An unexpected error occurred')
       }
-    } finally {
+    }/* finally {
       setLoading(false)
-    }
+    }*/
   }
 
 

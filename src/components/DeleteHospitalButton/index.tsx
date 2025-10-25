@@ -35,7 +35,8 @@ export default function DeleteHospitalButton({ id, userToken }: DeleteHospitalBu
       });
 
       if (!res.ok) {
-        throw new Error("Failed to delete hospital");
+        alert("حدث خطأ أثناء حذف المستشفى");
+        setLoading(false);
       }
 
       // redirect after deletion

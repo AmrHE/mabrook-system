@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 import { Label } from '@radix-ui/react-label';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import React, { useState } from 'react'
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -27,6 +27,8 @@ const HospitalStockDetails = ({
 
   // Initialize local state with the current stock quantities
   const [stocks, setStocks] = useState<ProductStock[]>(productStocks);
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
 
   const handleChange = (id: string, value: number) => {
     setStocks((prev) =>
@@ -37,6 +39,7 @@ const HospitalStockDetails = ({
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    setIsLoading(true)
     e.preventDefault();
 
     // Transform state into the required format
@@ -57,11 +60,13 @@ const HospitalStockDetails = ({
         body: JSON.stringify({ hospitalQuantities }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        alert('حدث خطأ ما أثناء تعديل الكميات. الرجاء المحاولة مرة أخرى.');
+        setIsLoading(false)
       }
+
+      alert('تمت تعديل الكميات بنجاح!');
+      router.push(`/hospitals/${hospitalId}`);
 
     } catch (error: any) {
       console.error("Error updating:", error.message);
@@ -95,8 +100,9 @@ const HospitalStockDetails = ({
         <Button
           className="lg:w-2/3 w-full text-center py-6 text-xl font-semibold"
           type="submit"
+          disabled={isLoading}
         >
-          تعديل الكميات
+          {isLoading ? 'جاري الحفظ...' : 'احفظ الكميات'}
         </Button>
       </div>
     </form>

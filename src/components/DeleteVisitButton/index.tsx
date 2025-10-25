@@ -35,7 +35,8 @@ export default function DeleteVisitButton({ id, userToken }: DeleteVisitButtonPr
       });
 
       if (!res.ok) {
-        throw new Error("Failed to delete visit");
+        alert("حدث خطأ أثناء حذف الزيارة");
+        setLoading(false);
       }
 
       // redirect after deletion

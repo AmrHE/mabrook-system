@@ -45,7 +45,7 @@ const ProductsPage = async () => {
         warehouseQuantity: product.warehouseQuantity,
         hospitalsQuantity: product.hospitalsQuantity,
       });
-    });
+    })/*.sort((a: Product, b: Product) => a.totalQuantity - b.totalQuantity);*/
   }
 
   return (

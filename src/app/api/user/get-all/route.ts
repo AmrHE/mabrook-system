@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
 
   const users = await User
   .find({isActive: true})
+  .populate({path: "visits", model: "Visit", select: "isActive"})
   .sort({ createdAt: -1 });
 
   if(!users) {

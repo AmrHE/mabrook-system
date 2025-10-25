@@ -15,11 +15,12 @@ const CreateNewProduct = ({userToken}: {userToken: string | undefined}) => {
   const [warehouseQuantity, setWarehouseQuantity] = useState<number>(0);
   const [responseMessage, setResponseMessage] = useState('');
   const [createdProduct, setCreatedProduct] = useState<any>(null);
-
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true)
     try {
       const res = await fetch(`/api/product/create`, {
         method: 'POST',
@@ -40,9 +41,11 @@ const CreateNewProduct = ({userToken}: {userToken: string | undefined}) => {
       setCreatedProduct(data.product);
 
       if (!res.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        alert('حدث خطأ ما أثناء إضافة المنتج. الرجاء المحاولة مرة أخرى.');
+        setIsLoading(false)
       }
       setResponseMessage('Product created successfully!');
+      alert('تمت إضافة المنتج بنجاح!');
       router.push(`/products/${data.product._id}`);
     } catch (error: any) {
       setResponseMessage(`Error: ${error.message}`);
@@ -96,7 +99,9 @@ const CreateNewProduct = ({userToken}: {userToken: string | undefined}) => {
         onChange={(e) => setWarehouseQuantity(Number(e.target.value))} 
       />
       <div className='flex items-center justify-center w-full mt-4'>
-        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit'>تعديل المنتج</Button>
+        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>
+          { isLoading ? 'جاري الحفظ...' : 'اضف المنتج' }
+        </Button>
       </div>
     </form>
   )

@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { Shift } from "@/models/Shift";
 import { shiftStatus } from "@/models/enum.constants";
 import { cookies } from "next/headers";
+import { User } from "@/models/User";
 
 export async function GET(req: NextRequest) {
   
@@ -30,7 +31,9 @@ export async function GET(req: NextRequest) {
     if(!endedShift) {
     return NextResponse.json({status: 404, message: "No shift is currently opened! please start a new shift"})
   }
-
+const user = await User.findById(userPayload._id)
+  user.isOnShift = false;
+  await user.save();
   await endedShift.save()
   const cookieStore = await cookies()
   cookieStore.set('shiftStatus', shiftStatus.ENDED)

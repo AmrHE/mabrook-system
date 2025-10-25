@@ -35,7 +35,8 @@ export default function DeletedMomButton({ id, userToken }: DeletedMomButtonProp
       });
 
       if (!res.ok) {
-        throw new Error("Failed to delete mom");
+        alert("حدث خطأ أثناء حذف الأم");
+        setLoading(false);
       }
 
       // redirect after deletion

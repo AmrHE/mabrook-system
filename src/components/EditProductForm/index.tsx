@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 import { Label } from '@radix-ui/react-label';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -15,10 +15,12 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
   const [description, setDescription] = useState("");
   // const [image, setImage] = useState<File | null>(null)
   const [size, setSize] = useState("");
+  const [isLoading, setIsLoading] = useState(false)
 
   const [warehouseQuantity, setWarehouseQuantity] = useState<number>(0);
   const [responseMessage, setResponseMessage] = useState('');
   const [updatedProduct, setUpdatedProduct] = useState<any>(null);
+  const router = useRouter();
   
 
   useEffect(() => {
@@ -41,6 +43,7 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
   }, [updatedProduct])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    setIsLoading(true)
     e.preventDefault();
     try {
       const res = await fetch(`/api/product/edit-product/${productId}`, {
@@ -61,10 +64,13 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
       setUpdatedProduct(data.product);
 
       if (!res.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        alert('حدث خطأ ما أثناء تعديل المنتج. الرجاء المحاولة مرة أخرى.');
+        setIsLoading(false)
       }
-
+      alert('تمت تعديل المنتج بنجاح!');
       setResponseMessage('Mom submitted successfully!');
+      router.push(`/products/${productId}`);
+
     } catch (error: any) {
       setResponseMessage(`Error: ${error.message}`);
     }
@@ -118,7 +124,9 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
       />
       
       <div className='flex items-center justify-center w-full mt-4'>
-        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit'>تعديل المنتج</Button>
+        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>
+          { isLoading ? 'جاري الحفظ...' : 'احفظ التعديلات' }
+        </Button>
       </div>
     </form>
   )

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useEffect, useState } from "react";
 import { userRoles } from "@/models/enum.constants";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 // Menu items.
 const items = [
@@ -56,8 +56,8 @@ const items = [
 ]
 export function AppSidebar({ userRole }: { userRole?: string }) {
   const router = useRouter();  
+  const pathname = usePathname();
   const [dir, setDir] = useState<'ltr' | 'rtl'>('rtl');
-
 
   useEffect(() => {
     if(typeof window !== "undefined") {
@@ -85,7 +85,15 @@ export function AppSidebar({ userRole }: { userRole?: string }) {
                 if (item.title === "Products" && userRole === userRoles.EMPLOYEE) return null;
                 return(
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="w-full flex items-center justify-center">
+                  <SidebarMenuButton 
+                    asChild 
+                    className={`w-full flex items-center justify-center 
+                      ${pathname.includes(item.url) ? 
+                        item.url !== "/" ? 
+                        'bg-gray-200 dark:bg-gray-700 font-bold underline' : 
+                        '' : 
+                        ''
+                      }`} >
                     <a href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>

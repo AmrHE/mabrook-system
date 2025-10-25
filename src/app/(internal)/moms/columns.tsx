@@ -10,6 +10,7 @@ type Mom = {
   numberOfnewborns: number;
   numberOfMales: number;
   numberOfFemales: number;
+  hospitalName: string;
 }
 
 export const columns: ColumnDef<Mom>[] = [
@@ -20,6 +21,10 @@ export const columns: ColumnDef<Mom>[] = [
   {
     accessorKey: "name",
     header: "اسم الأم",
+  },
+  {
+    accessorKey: "hospitalName",
+    header: "اسم المستشفى",
   },
   {
     accessorKey: "nationality",

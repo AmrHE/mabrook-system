@@ -6,7 +6,7 @@ import { Label } from '../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 import { Input } from '../ui/input'
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import { userRoles } from '@/models/enum.constants';
 
@@ -22,6 +22,9 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
   const [updatedUser, setUpdatedUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<userRoles | null>(null)
   const [responseMessage, setResponseMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+
 
   useEffect(() => {
     if(employee) {
@@ -46,6 +49,7 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
   }, [updatedUser]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    setIsLoading(true)
     e.preventDefault();
     try {
       const res = await fetch(`/api/user/update-user/${userId}`, {
@@ -68,10 +72,13 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
       setUpdatedUser(data.user);
 
       if (!res.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        alert('حدث خطأ ما أثناء تعديل الموظف. الرجاء المحاولة مرة أخرى.');
+        setIsLoading(false)
       }
-
-      setResponseMessage('Mom submitted successfully!');
+      alert('تمت تعديل الموظف بنجاح!');
+      setResponseMessage('Mom submitted successfully!');      
+      router.push(`/employees/${userId}`);
+      
     } catch (error: any) {
       setResponseMessage(`Error: ${error.message}`);
     }
@@ -113,10 +120,10 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
       />
 
       <Label htmlFor="email">
-        البريد الاليكتروني
+        البريد الإلكتروني
       </Label>
       <Input
-        placeholder="البريد الاليكتروني"
+        placeholder="البريد الإلكتروني"
         id="email"
         required
         value={email? email : ''}
@@ -156,7 +163,9 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
       />
 
       <div className='flex items-center justify-center w-full mt-4'>
-        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit'>تعديل الموظف</Button>
+        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>
+          { isLoading ? 'جاري الحفظ...' : 'حفظ التعديلات' }
+        </Button>
       </div>
     </form>
   )

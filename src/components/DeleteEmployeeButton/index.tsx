@@ -35,7 +35,8 @@ export default function DeleteEmployeeButton({ id, userToken }: DeleteEmployeeBu
       });
 
       if (!res.ok) {
-        throw new Error("Failed to delete employee");
+        alert("حدث خطأ أثناء حذف الموظف");
+        setLoading(false);
       }
 
       // redirect after deletion

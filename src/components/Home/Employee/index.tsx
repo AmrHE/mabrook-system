@@ -80,17 +80,25 @@ export default function EmployeeDashboard({userToken, currentShift, visitStatus,
         <div className="flex items-start lg:items-center flex-col lg:flex-row gap-10 justify-between bg-white rounded-xl p-10 border-t border-solid border-gray-200">
           <div className="flex items-start lg:items-center flex-col lg:flex-row lg:px-10 gap-4 divide-gray-300">
             <div className="space-y-4 text-center me-20">
-              <p className="text-gray-500">تاريخ الدوام</p>
+              <p className="text-gray-500">توقيت بدأ الدوام</p>
               <h1 className="font-medium text-xl">
-                {new Date(shift.startTime).toDateString()}
+                {new Date(shift.startTime).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
               </h1>
             </div>
-            <div className="space-y-4 text-center me-20">
+            {/* <div className="space-y-4 text-center me-20">
               <p className="text-gray-500">توقيت البدأ</p>
               <h1 className="font-medium text-xl">
-                {new Date(shift.startTime).toLocaleTimeString()}
+                {new Date(shift.startTime).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
               </h1>
-            </div>
+            </div> */}
           </div>
 
           {userToken && visitStatus !== shiftStatus.IN_PROGRESS ? (

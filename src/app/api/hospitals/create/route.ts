@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { initDb } from '../../../../lib/mongoose';
 import { Hospital } from '@/models/Hospital';
+import { Product } from '@/models/Product';
 
 export async function POST(req: NextRequest) {
   await initDb();
@@ -34,11 +35,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Hostpital already exists' }, { status: 409 });
   }
 
+    const products = await Product.find({})
+    const productStocks = products.map(product => ({
+      product: product._id,
+      quantity: 0,
+      lastRestockedAt: null
+    }));
+
   const newHospital = await Hospital.create({
     name,
     district,
     city,
     createdBy: userPayload._id,
+    productStocks,
   });
 
   if(!newHospital) {

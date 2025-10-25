@@ -1,8 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function SurveyForm({ products, id, userToken } : {products: any, id: string, userToken: string | undefined}) {
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  
   // Prepare initial state based on products
   const [survey, setSurvey] = useState(
     products
@@ -15,7 +20,6 @@ export default function SurveyForm({ products, id, userToken } : {products: any,
           return { question: q, answer: existingAnswer };
         }),
       }))
-
   );
 
   // Handle answer change
@@ -35,8 +39,9 @@ export default function SurveyForm({ products, id, userToken } : {products: any,
   };
 
   const handleSubmit = async (/*e:any*/) => {
+    setIsLoading(true)
     // e.preventDefault();
-    await fetch(`/api/mom/add-survey/${id}`, {
+    const res = await fetch(`/api/mom/add-survey/${id}`, {
       method: "PATCH",
       headers: { 
         "Content-Type": "application/json",
@@ -44,6 +49,15 @@ export default function SurveyForm({ products, id, userToken } : {products: any,
       },
       body: JSON.stringify({ survey }),
     });
+
+    const data = await res.json();
+      if (!res.ok) {
+        alert('حدث خطأ ما أثناء إضافة الأسئلة. الرجاء المحاولة مرة أخرى.');
+        setIsLoading(false)
+      }
+      alert('تمت إضافة الأسئلة بنجاح!');
+      router.push(`/moms/${id}`);
+      console.log("Questions added successfully:", data);
   };
   
   return (
@@ -71,12 +85,13 @@ export default function SurveyForm({ products, id, userToken } : {products: any,
         );
       })}
 
-      <button
+      <Button
         type="submit"
         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        disabled={isLoading}
       >
-        Submit Survey
-      </button>
+        {isLoading ? 'جاري الحفظ...' : ' احفظ التعديلات'}
+      </Button>
     </form>
   );
 }

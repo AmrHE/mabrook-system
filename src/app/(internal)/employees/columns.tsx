@@ -9,6 +9,7 @@ type Employee = {
   phoneNumber: string;
   role: string;
   isOnShift: boolean;
+  visitCount: number;
 } 
 
 export const columns: ColumnDef<Employee>[] = [
@@ -39,5 +40,9 @@ export const columns: ColumnDef<Employee>[] = [
   {
     accessorKey: "isOnShift",
     header: "في الدوام الان",
+  },
+  {
+    accessorKey: "visitCount",
+    header: "عدد الزيارات",
   },
 ]

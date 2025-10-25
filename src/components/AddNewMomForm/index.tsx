@@ -28,8 +28,8 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
   const [numberOfFemales, setNumberOfFemales] = useState<number | null>(0)
   const [genderOfNewborns, setGenderOfNewborns] = useState<string[]>([])
   const [signatureData, setSignatureData] = useState<string | null>(null)
-  const [responseMessage, setResponseMessage] = useState('')
-
+  const [isLoading, setIsLoading] = useState(false)
+  const [responseMessage, setResponseMessage] = useState<string | null>("")
   const sigCanvas = useRef<SignatureCanvas>(null)
 
   const handleGenderChange = (index: number, value: string) => {
@@ -50,6 +50,7 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    setIsLoading(true)
     e.preventDefault()
 
     const signatureImage = sigCanvas.current?.isEmpty()
@@ -99,14 +100,12 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.message || 'Something went wrong')
+        alert('حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.');
+        setIsLoading(false);
+        setResponseMessage(data.message || 'حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.');
       }
-
+      alert('تمت إضافة الام بنجاح!');
       router.push(`/moms/${data.mom._id}`)
-      setResponseMessage('Mom submitted successfully!')
-    // } catch (error: any) {
-    //   setResponseMessage(`Error: ${error.message}`)
-    // }
   }
 
   return (
@@ -124,6 +123,8 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
       <Input
         placeholder="رقم الجوال"
         id="phoneNumber"
+        minLength={10}
+        maxLength={10}
         required
         value={phoneNumber}
         onChange={(e) => setPhoneNumber(e.target.value)}
@@ -257,8 +258,8 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
       </div>
 
       <div className='flex items-center justify-center w-full mt-4'>
-        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit'>
-          اضافة الام
+        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>
+          {isLoading ? 'جاري الحفظ...' : 'اضف الام'}
         </Button>
       </div>
 

@@ -22,6 +22,7 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
   const [open, setOpen] = useState(false) // Changed from true to false
   const [value, setValue] = useState("")
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -57,6 +58,7 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
 
 
   const handleAddNewVisit = async () => {
+    setIsLoading(true)
     const res = await fetch('/api/visit/create', {
       method: 'POST',
       headers: {
@@ -71,8 +73,11 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
     const data = await res.json();
 
     if (res.status === 201) {
+      alert('تمت إضافة الزيارة بنجاح!');
       router.push(`/visits/${data.visit._id}`)
     } else {
+      alert('حدث خطأ ما أثناء إضافة الزيارة. الرجاء المحاولة مرة أخرى.');
+      setIsLoading(false)
       console.log('error', data.message);
     }
 
@@ -148,8 +153,8 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
         </Popover>
 
         <DialogFooter className="sm:justify-start">
-          <Button type="button" className='bg-[#5570F1] hover:bg-[#5570F1]' onClick={handleAddNewVisit}>
-            حفظ
+          <Button type="button" className='bg-[#5570F1] hover:bg-[#5570F1]' onClick={handleAddNewVisit} disabled={isLoading}>
+            {isLoading ? 'جاري الحفظ...' : 'حفظ'}
           </Button>
           <DialogClose asChild>
             <Button type="button" variant="secondary" className='border-2 bg-white text-[#5570F1] border-solid border-[#5570F1]'>

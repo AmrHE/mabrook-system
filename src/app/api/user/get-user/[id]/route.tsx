@@ -29,6 +29,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const user = await User.findById(id)
+  .populate({path: "visits", model: "Visit", select: "isActive"})
+  .lean()
   .sort({ createdAt: -1 });//remove this sort function and check this line all over the codebase
 
   if(!user) {

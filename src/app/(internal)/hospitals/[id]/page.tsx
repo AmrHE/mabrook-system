@@ -48,7 +48,7 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
       </TabsList>
       <TabsContent value="hospitalDetails">
         <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل المستشفى</h4>
-        <div className='flex max-w-[300px] justify-between'>
+        <div className='flex max-w-[350px] justify-between'>
           <div className='flex flex-col gap-5'>
             <p>اسم المستشفى</p>
             <p>المدينة</p>
@@ -65,7 +65,7 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
         </div>
 
         <h4 className='mt-12 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل الموظف</h4>
-        <div className='flex max-w-[300px] justify-between'>
+        <div className='flex max-w-[350px] justify-between'>
           <div className='flex flex-col gap-5'>
             <p>اسم الموظف</p>
             {/* <p>ايميل الموظف</p> */}
@@ -75,8 +75,16 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
           <div className='flex flex-col gap-5'>
             <p>{`${hospital?.hospital?.createdBy.firstName} ${hospital?.hospital?.createdBy.lastName}`}</p>
             {/* <p className='max-w-28 truncate'>{hospital.hospital.createdBy.email}</p> */}
-            <p>{new Date(hospital?.hospital?.createdAt).toDateString()}</p>
-            {/* <p>{new Date(hospital.hospital.startTime).toLocaleTimeString()}</p> */}
+            <p>{new Date(hospital?.hospital?.createdAt).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}</p>
+            {/* <p>{new Date(hospital.hospital.startTime).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}</p> */}
           </div>
         </div>
 

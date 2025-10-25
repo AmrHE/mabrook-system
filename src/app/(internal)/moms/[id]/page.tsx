@@ -58,7 +58,7 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
       </TabsList>
       <TabsContent value="momDetails">
         <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>بيانات الأم</h4>
-        <div className='flex max-w-[300px] justify-between'>
+        <div className='flex max-w-[350px] justify-between'>
           <div className='flex flex-col gap-5'>
             <p>الاسم</p>
             <p>الجنسية</p>
@@ -67,6 +67,7 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
             <p>العنوان</p>
             <p>تاريخ التسجيل</p>
             <p>اسم الموظف</p>
+            <p>اسم المستشفى</p>
           </div>
           <div className='flex flex-col gap-5'>
             <p>{mom?.mom?.name}</p>
@@ -74,13 +75,18 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
             <p>{mom?.mom?.phoneNumber || "لا يوجد"}</p>
             <p>{mom?.mom?.allowFutureCom ? "نعم" : "لا"}</p>
             <p>{mom?.mom?.address || "غير متوفر"}</p>
-            <p>{new Date(mom?.mom?.createdAt).toDateString()}</p>
+            <p>{new Date(mom?.mom?.createdAt).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}</p>
             <p>{`${mom?.mom?.createdBy?.firstName} ${mom?.mom?.createdBy?.lastName}`}</p>
+            <p>{mom?.mom?.visitId.hospitalId.name}</p>
           </div>
         </div>
 
         <h4 className='mt-12 mb-4 font-semibold text-gray-700 text-xl'>بيانات الأطفال</h4>
-        <div className='flex max-w-[300px] justify-between'>
+        <div className='flex max-w-[350px] justify-between'>
           <div className='flex flex-col gap-5'>
             <p>اجمالي عدد الأطفال</p>
             <p>عدد الذكور</p>

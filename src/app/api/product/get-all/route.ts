@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const products = await Product
   .find()
   .populate('createdBy', 'email firstName lastName')
-  .sort({ createdAt: -1 });
+  .sort({ totalQuantity: 1 });
 
   if(!products) {
     return NextResponse.json({status: 404, message: "No products found"})

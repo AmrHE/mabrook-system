@@ -25,8 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const mom = await Mom
   .findById(id)
-  .populate('visitId')
-  .populate('createdBy')
+  .populate({path: 'visitId', populate: { path: 'hospitalId', model: 'Hospital'}})
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
 
   if(userPayload.role !== userRoles.ADMIN && userPayload._id !== mom?.createdBy._id.toString()) {

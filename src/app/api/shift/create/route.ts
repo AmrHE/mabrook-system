@@ -27,11 +27,15 @@ export async function POST(req: NextRequest) {
   }
 
   const newShift = await Shift.create({
-    userId: userPayload._id
+    userId: userPayload._id,
+    startTime: new Date(),
+    status: shiftStatus.IN_PROGRESS,
   })
 
   const user = await User.findById(userPayload._id)
   user.shifts.push(newShift._id);
+  user.isOnShift = true;
+  
   await user.save();
 
   const cookieStore = await cookies()

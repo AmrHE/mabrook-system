@@ -109,7 +109,7 @@ async function getMomsData(visitId: string, userToken: any) {
       </TabsList>
       <TabsContent value="visitDetails">
         <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل الزيارة</h4>
-        <div className='flex max-w-[300px] justify-between'>
+        <div className='flex max-w-[350px] justify-between'>
           <div className='flex flex-col gap-5'>
             <p>التاريخ</p>
             <p>رقم الزيارة</p>
@@ -117,15 +117,23 @@ async function getMomsData(visitId: string, userToken: any) {
             <p>اسم الموظف</p>
           </div>
           <div className='flex flex-col gap-5'>
-            <p>{new Date(visit.visit.startTime).toDateString()}</p>
+            <p>{new Date(visit.visit.startTime).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}</p>
             <p className='max-w-28 truncate'>{visit.visit._id}</p>
-            <p>{new Date(visit.visit.startTime).toLocaleTimeString()}</p>
+            <p>{new Date(visit.visit.startTime).toLocaleString("en-SA", {
+                timeZone: "Asia/Riyadh",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}</p>
             <p>{`${visit.visit.createdBy.firstName} ${visit.visit.createdBy.lastName}`}</p>
           </div>
         </div>
 
         <h4 className='mt-16 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل المستشفى</h4>
-        <div className='flex max-w-[300px] justify-between'>
+        <div className='flex max-w-[350px] justify-between'>
           <div className='flex flex-col gap-5'>
             <p>اسم المستشفى</p>
             <p>المدينة</p>

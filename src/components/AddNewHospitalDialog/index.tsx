@@ -22,9 +22,11 @@ const AddNewHospitalDialog = ({userToken}: {userToken: string | undefined}) => {
   const [hospitalName, setHospitalName] = useState('');
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
   const handleAddNewHospital = async () => {
+    setIsLoading(true)
     const res = await fetch('/api/hospitals/create', {
       method: 'POST',
       headers: {
@@ -39,8 +41,11 @@ const AddNewHospitalDialog = ({userToken}: {userToken: string | undefined}) => {
     const data = await res.json();
 
     if (res.status === 201) {
+      alert('تمت إضافة المستشفى بنجاح!');
       router.push(`/hospitals/${data.hospital._id}`)
     } else {
+      alert('حدث خطأ ما أثناء إضافة المستشفى. الرجاء المحاولة مرة أخرى.');
+      setIsLoading(false);
       console.log('error', data.message);
     }
   }
@@ -92,8 +97,8 @@ const AddNewHospitalDialog = ({userToken}: {userToken: string | undefined}) => {
           />
         </div>
         <DialogFooter className="sm:justify-start">
-          <Button type="button" className='bg-[#5570F1] hover:bg-[#5570F1]' onClick={handleAddNewHospital}>
-            حفظ
+          <Button type="button" className='bg-[#5570F1] hover:bg-[#5570F1]' onClick={handleAddNewHospital} disabled={isLoading}>
+            {isLoading ? 'جاري الحفظ...' : 'حفظ'}
           </Button>
           <DialogClose asChild>
             <Button type="button" variant="secondary" className='border-2 bg-white text-[#5570F1] border-solid border-[#5570F1]'>
