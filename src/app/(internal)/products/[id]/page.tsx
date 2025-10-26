@@ -10,6 +10,7 @@ import {
 import { userRoles } from '@/models/enum.constants';
 import EditProductForm from '@/components/EditProductForm';
 import AddQuestionsForm from '@/components/AddQuestionsForm';
+import DeletedProductButton from '@/components/DeleteProductButton';
 
 const SingleProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const cookieStore = await cookies();
@@ -33,7 +34,7 @@ const SingleProductPage = async ({ params }: { params: Promise<{ id: string }> }
 
   const product = await getProductData(id, userToken);
 
-  if(!product) {//TODO: MAKE A PROPER ERROR HANDLING FOR THIS CASES AND THE WHOLE APP
+  if(product.status === 404) {
     return (
       <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
         <h1 className='text-gray-800 font-bold text-3xl mb-10'>لا يوجد منتج بهذا المعرف</h1>
@@ -106,6 +107,12 @@ const SingleProductPage = async ({ params }: { params: Promise<{ id: string }> }
             <p>مخزون المستشفيات</p>
             <p>{product.product.hospitalsQuantity}</p>
           </div>
+        </div>
+
+        <div className='mt-10'>
+          {userRole === userRoles.ADMIN && (
+            <DeletedProductButton id={id} userToken={userToken!} />
+          )}
         </div>
 
       </TabsContent>

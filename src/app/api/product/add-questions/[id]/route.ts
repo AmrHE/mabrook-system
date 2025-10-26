@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
 
-  const product = await Product.findById(id)
+  const product = await Product.findOne({_id: id, isActive: true})
 
   if(!product) {
     return NextResponse.json({status: 404, message: "No product found"})

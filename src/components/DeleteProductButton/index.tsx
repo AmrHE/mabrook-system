@@ -14,19 +14,19 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-interface DeletedMomButtonProps {
+interface DeletedProductButtonProps {
   id: string;
   userToken: string;
 }
 
-export default function DeletedMomButton({ id, userToken }: DeletedMomButtonProps) {
+export default function DeletedProductButton({ id, userToken }: DeletedProductButtonProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleDelete = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/mom/delete/${id}`, {
+      const res = await fetch(`/api/product/delete/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -35,17 +35,16 @@ export default function DeletedMomButton({ id, userToken }: DeletedMomButtonProp
       });
 
       if (!res.ok) {
-        alert("حدث خطأ أثناء حذف الأم");
+        alert("حدث خطأ أثناء حذف المنتج");
         setLoading(false);
       }
 
       // redirect after deletion
-      alert("تم حذف بيانات الأم بنجاح");
-      router.push("/moms"); 
+      router.push("/products"); 
       router.refresh(); // ensures UI updates
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء حذف الأم");
+      alert("حدث خطأ أثناء حذف المنتج");
     } finally {
       setLoading(false);
     }
@@ -55,14 +54,14 @@ export default function DeletedMomButton({ id, userToken }: DeletedMomButtonProp
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <Button variant="destructive" disabled={loading}>
-          {loading ? "جارٍ الحذف..." : "حذف بيانات الأم"}
+          {loading ? "جارٍ الحذف..." : "حذف بيانات المنتج"}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent dir="rtl">
         <AlertDialogHeader>
           <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
           <AlertDialogDescription>
-            هل أنت متأكد أنك تريد حذف هذه الأم؟ هذا الإجراء لا يمكن التراجع عنه.
+            هل أنت متأكد أنك تريد حذف هذه المنتج؟ هذا الإجراء لا يمكن التراجع عنه.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

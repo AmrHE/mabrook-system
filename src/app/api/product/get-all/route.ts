@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   }
 
   const products = await Product
-  .find()
+  .find({isActive: true})
   .populate('createdBy', 'email firstName lastName')
   .sort({ totalQuantity: 1 });
 

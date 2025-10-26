@@ -28,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({status: 403, message: "You are not authorized to view this product"}, { status: 403 });
   }
 
-  const product = await Product.findById(id) 
+  const product = await Product.findOne({_id: id, isActive: true})
   .populate('createdBy', 'email firstName lastName');
 
   if(!product) {

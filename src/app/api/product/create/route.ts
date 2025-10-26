@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
       warehouseQuantity,
       hospitalsQuantity: 0,
       size: size || "N/A",
+      isActive: true,
     });
 
     if (!newProduct) {

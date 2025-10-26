@@ -26,7 +26,10 @@ export async function GET(req: NextRequest) {
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
   .sort({ createdAt: -1 });
 
-  // const allProducts = await Product.find({});
+
+  // ONE TIME SCRIPT TO SYNC HOSPITAL PRODUCTS WITH THE CURRENT PRODUCTS LIST IN THE DATABASE -- USE IF NEEDED
+
+  // const allProducts = await Product.find({isActive: true});
   // for (const hospital of hospitals) {
   //     const existingProductIds = (hospital.productStocks || []).map(
   //       stock => stock.product.toString()

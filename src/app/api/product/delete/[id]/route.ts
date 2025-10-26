@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { userRoles } from "@/models/enum.constants";
 import { Product } from "@/models/Product";
+import { Hospital } from "@/models/Hospital";
+// import bcrypt from "bcrypt";
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
 
   const { id } = await params;
   
-  const reqBody = await req.json()
-  const { name, description, size, warehouseQuantity } = reqBody;
 
   await initDb();
   /***************ADMIN GAURD START****************/
@@ -21,8 +21,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
 
-  if (userPayload.role === userRoles.EMPLOYEE){
-    return NextResponse.json({status: 403, message: "This Action is not allowed for you"})
+  if (userPayload.role !== userRoles.ADMIN){
+    return NextResponse.json({status: 403, message: "This Action is only allowed for Admins"})
   }
   /***************ADMIN GAURD END****************/
 
@@ -30,24 +30,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
 
-  const product = await Product.findOne({_id: id, isActive: true})
+  const product = await Product.findById(id)
 
   if(!product) {
     return NextResponse.json({status: 404, message: "No product found"})
   }
 
-  if (name) product.name = name;
-  if (description) product.description = description;
-  if (size) product.size = size;
-  if (warehouseQuantity) product.warehouseQuantity = warehouseQuantity;
-  
-  product.totalQuantity = product.hospitalsQuantity + product.warehouseQuantity;
+  // Remove this product from all hospitals' productStocks arrays
+  await Hospital.updateMany(
+    {},
+    {
+      $pull: {
+        productStocks: { product: id }
+      }
+    }
+  );
 
-
-  
-  
-
-  product.updatedAt = new Date();
+  product.isActive = false;
+  product.deletedAt = new Date();
   await product.save();
 
   return NextResponse.json({ message: "Product updated successfully", product }, { status: 200 });

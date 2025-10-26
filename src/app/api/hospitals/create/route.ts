@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Hostpital already exists' }, { status: 409 });
   }
 
-    const products = await Product.find({})
+    const products = await Product.find({isActive: true});
     const productStocks = products.map(product => ({
       product: product._id,
       quantity: 0,
