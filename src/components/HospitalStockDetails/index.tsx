@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useState } from 'react'
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { toast } from 'sonner';
 
 interface ProductStock {
   _id: string;
@@ -61,14 +62,14 @@ const HospitalStockDetails = ({
       });
 
       if (!res.ok) {
-        alert('حدث خطأ ما أثناء تعديل الكميات. الرجاء المحاولة مرة أخرى.');
+        toast.error('حدث خطأ ما أثناء تعديل الكميات. الرجاء المحاولة مرة أخرى.');
         setIsLoading(false)
       }
-
-      alert('تمت تعديل الكميات بنجاح!');
+      toast.success('تمت تعديل الكميات بنجاح!');
       router.push(`/hospitals/${hospitalId}`);
-
     } catch (error: any) {
+      toast.error('حدث خطأ ما أثناء تعديل الكميات. الرجاء المحاولة مرة أخرى.');
+      toast.error("Error updating:", error.message);
       console.error("Error updating:", error.message);
     }
   };

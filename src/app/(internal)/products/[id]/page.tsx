@@ -63,10 +63,10 @@ const SingleProductPage = async ({ params }: { params: Promise<{ id: string }> }
             <p>اسم المنتج</p>
             <p>{product.product.name}</p>
           </div>
-          <div className='flex items-start gap-20'>
+          {/* <div className='flex items-start gap-20'>
             <p>رقم المنتج</p>
             <p className='truncate'>{product.product._id}</p>
-          </div>
+          </div> */}
           <div className='flex items-start gap-20'>
             <p>وصف المنتج</p>
             <p className='max-w-4/6'>{product.product.description}</p>
@@ -83,14 +83,14 @@ const SingleProductPage = async ({ params }: { params: Promise<{ id: string }> }
                 timeStyle: "short",
               })}</p>
           </div>
-          <div className='flex items-start gap-20'>
+          {/* <div className='flex items-start gap-20'>
             <p>تاريخ اخر تعديل</p>
             <p className='truncate'>{new Date(product.product.updatedAt).toLocaleString("en-SA", {
                 timeZone: "Asia/Riyadh",
                 dateStyle: "medium",
                 timeStyle: "short",
               })}</p>
-          </div>
+          </div> */}
         </div>
 
         <h4 className='mt-16 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل المخزون</h4>

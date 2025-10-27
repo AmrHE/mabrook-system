@@ -5,6 +5,7 @@ import { Label } from '../ui/label'
 import { Input } from '../ui/input'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '../ui/button'
+import { toast } from 'sonner'
 
 const AddQuestionsForm = ({ userToken, product }: { userToken: string | undefined, product: any }) => {
   const params = useParams();
@@ -52,14 +53,14 @@ const AddQuestionsForm = ({ userToken, product }: { userToken: string | undefine
 
       const data = await res.json();
       if (!res.ok) {
-        alert('حدث خطأ ما أثناء إضافة الأسئلة. الرجاء المحاولة مرة أخرى.');
+        toast.error('حدث خطأ ما أثناء إضافة الأسئلة. الرجاء المحاولة مرة أخرى.');
         setIsLoading(false)
       }
-      alert('تمت إضافة الأسئلة بنجاح!');
+      toast.success('تمت إضافة الأسئلة بنجاح!');
       router.push(`/products/${productId}`);
       console.log("Questions added successfully:", data);
     } catch (error) {
-      console.error("Error adding questions:", error);
+      toast.error("Error adding questions:" + error);
     }
   }
 

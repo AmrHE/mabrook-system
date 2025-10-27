@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface DeletedProductButtonProps {
   id: string;
@@ -35,16 +36,17 @@ export default function DeletedProductButton({ id, userToken }: DeletedProductBu
       });
 
       if (!res.ok) {
-        alert("حدث خطأ أثناء حذف المنتج");
+        toast.error("حدث خطأ أثناء حذف المنتج");
         setLoading(false);
       }
 
       // redirect after deletion
+      toast.success("تم حذف المنتج بنجاح");
       router.push("/products"); 
       router.refresh(); // ensures UI updates
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء حذف المنتج");
+      toast.error("حدث خطأ أثناء حذف المنتج");
     } finally {
       setLoading(false);
     }

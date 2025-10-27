@@ -11,10 +11,10 @@ type Hospital = {
 }
 
 export const columns: ColumnDef<Hospital>[] = [
-  {
-    accessorKey: "id",
-    header: "رقم المستشفى",
-  },
+  // {
+  //   accessorKey: "id",
+  //   header: "رقم المستشفى",
+  // },
   {
     accessorKey: "name",
     header: "اسم المستشفى",

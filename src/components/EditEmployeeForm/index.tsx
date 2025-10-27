@@ -9,6 +9,7 @@ import { Input } from '../ui/input'
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import { userRoles } from '@/models/enum.constants';
+import { toast } from 'sonner';
 
 
 const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined, employee: any}) => {
@@ -72,14 +73,16 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
       setUpdatedUser(data.user);
 
       if (!res.ok) {
-        alert('حدث خطأ ما أثناء تعديل الموظف. الرجاء المحاولة مرة أخرى.');
+        toast.error('حدث خطأ ما أثناء تعديل الموظف. الرجاء المحاولة مرة أخرى.');
         setIsLoading(false)
       }
-      alert('تمت تعديل الموظف بنجاح!');
+      toast.success('تمت تعديل الموظف بنجاح!');
       setResponseMessage('Mom submitted successfully!');      
       router.push(`/employees/${userId}`);
       
     } catch (error: any) {
+      toast.error('حدث خطأ ما أثناء تعديل الموظف. الرجاء المحاولة مرة أخرى.');
+      toast.error(`Error: ${error.message}`);
       setResponseMessage(`Error: ${error.message}`);
     }
   };

@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface DeletedMomButtonProps {
   id: string;
@@ -35,17 +36,17 @@ export default function DeletedMomButton({ id, userToken }: DeletedMomButtonProp
       });
 
       if (!res.ok) {
-        alert("حدث خطأ أثناء حذف الأم");
+        toast.error("حدث خطأ أثناء حذف الأم");
         setLoading(false);
       }
 
       // redirect after deletion
-      alert("تم حذف بيانات الأم بنجاح");
+      toast.success("تم حذف بيانات الأم بنجاح");
       router.push("/moms"); 
       router.refresh(); // ensures UI updates
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء حذف الأم");
+      toast.error("حدث خطأ أثناء حذف الأم");
     } finally {
       setLoading(false);
     }

@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface DeleteHospitalButtonProps {
   id: string;
@@ -35,16 +36,17 @@ export default function DeleteHospitalButton({ id, userToken }: DeleteHospitalBu
       });
 
       if (!res.ok) {
-        alert("حدث خطأ أثناء حذف المستشفى");
+        toast.error("حدث خطأ أثناء حذف المستشفى");
         setLoading(false);
       }
 
       // redirect after deletion
+      toast.success("تم حذف المستشفى بنجاح");
       router.push("/hospitals"); 
       router.refresh(); // ensures UI updates
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء حذف المستشفى");
+      toast.error("حدث خطأ أثناء حذف المستشفى");
     } finally {
       setLoading(false);
     }

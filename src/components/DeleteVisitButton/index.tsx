@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface DeleteVisitButtonProps {
   id: string;
@@ -35,16 +36,17 @@ export default function DeleteVisitButton({ id, userToken }: DeleteVisitButtonPr
       });
 
       if (!res.ok) {
-        alert("حدث خطأ أثناء حذف الزيارة");
+        toast.error("حدث خطأ أثناء حذف الزيارة");
         setLoading(false);
       }
 
       // redirect after deletion
+      toast.success("تم حذف الزيارة بنجاح");
       router.push("/visits"); 
       router.refresh(); // ensures UI updates
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء حذف الزيارة");
+      toast.error("حدث خطأ أثناء حذف الزيارة");
     } finally {
       setLoading(false);
     }

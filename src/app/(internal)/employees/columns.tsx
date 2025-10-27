@@ -13,10 +13,10 @@ type Employee = {
 } 
 
 export const columns: ColumnDef<Employee>[] = [
-  {
-    accessorKey: "id",
-    header: "رقم الموظف",
-  },
+  // {
+  //   accessorKey: "id",
+  //   header: "رقم الموظف",
+  // },
   {
     accessorKey: "firstName",
     header: "الاسم الأول",

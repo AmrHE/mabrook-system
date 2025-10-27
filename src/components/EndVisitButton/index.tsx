@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 const EndVisitButton = ({id, userToken} : {id: string | undefined, userToken: string | undefined}) => {
   const [isLoading, setIsLoading] = useState(false)
@@ -18,10 +19,10 @@ const EndVisitButton = ({id, userToken} : {id: string | undefined, userToken: st
     },
   });
   if (!res.ok) {
-    alert('حدث خطأ ما أثناء انهاء الزيارة. الرجاء المحاولة مرة أخرى.');
+    toast.error('حدث خطأ ما أثناء انهاء الزيارة. الرجاء المحاولة مرة أخرى.');
     setIsLoading(false)
   }
-  alert('تم انهاء الزيارة بنجاح!');
+  toast.success('تم انهاء الزيارة بنجاح!');
   router.push(`/`)
 }
   return (

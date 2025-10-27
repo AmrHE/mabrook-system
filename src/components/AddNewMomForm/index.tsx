@@ -11,6 +11,7 @@ import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
 import SignatureCanvas from 'react-signature-canvas'
 import Image from 'next/image'
+import { toast } from 'sonner'
 
 const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, visit?: string | undefined }) => {
   const router = useRouter()
@@ -100,11 +101,12 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
       const data = await res.json()
 
       if (!res.ok) {
-        alert('حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.');
+        toast.error('حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.');
+        toast.error(data.message);
         setIsLoading(false);
         setResponseMessage(data.message || 'حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.');
       }
-      alert('تمت إضافة الام بنجاح!');
+      toast.success('تمت إضافة الام بنجاح!');
       router.push(`/moms/${data.mom._id}`)
   }
 

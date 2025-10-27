@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface DeleteEmployeeButtonProps {
   id: string;
@@ -35,16 +36,17 @@ export default function DeleteEmployeeButton({ id, userToken }: DeleteEmployeeBu
       });
 
       if (!res.ok) {
-        alert("حدث خطأ أثناء حذف الموظف");
+        toast.error("حدث خطأ أثناء حذف الموظف");
         setLoading(false);
       }
 
       // redirect after deletion
+      toast.success("تم حذف الموظف بنجاح");
       router.push("/employees"); 
       router.refresh(); // ensures UI updates
     } catch (err) {
       console.error(err);
-      alert("حدث خطأ أثناء حذف الموظف");
+      toast.error("حدث خطأ أثناء حذف الموظف");
     } finally {
       setLoading(false);
     }

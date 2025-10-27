@@ -112,7 +112,7 @@ async function getMomsData(visitId: string, userToken: any) {
         <div className='flex max-w-[350px] justify-between'>
           <div className='flex flex-col gap-5'>
             <p>التاريخ</p>
-            <p>رقم الزيارة</p>
+            {/* <p>رقم الزيارة</p> */}
             <p>توقيت البدأ</p>
             <p>اسم الموظف</p>
           </div>
@@ -122,7 +122,7 @@ async function getMomsData(visitId: string, userToken: any) {
                 dateStyle: "medium",
                 timeStyle: "short",
               })}</p>
-            <p className='max-w-28 truncate'>{visit.visit._id}</p>
+            {/* <p className='max-w-28 truncate'>{visit.visit._id}</p> */}
             <p>{new Date(visit.visit.startTime).toLocaleString("en-SA", {
                 timeZone: "Asia/Riyadh",
                 dateStyle: "medium",

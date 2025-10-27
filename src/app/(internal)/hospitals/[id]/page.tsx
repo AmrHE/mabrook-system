@@ -53,14 +53,14 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
             <p>اسم المستشفى</p>
             <p>المدينة</p>
             <p>الحي</p>
-            <p>رقم المستشفى</p>
+            {/* <p>رقم المستشفى</p> */}
 
           </div>
           <div className='flex flex-col gap-5'>
             <p>{hospital?.hospital?.name}</p>
             <p>{hospital?.hospital?.city}</p>
             <p>{hospital?.hospital?.district}</p>
-            <p className='max-w-28 truncate'>{hospital?.hospital?._id}</p>
+            {/* <p className='max-w-28 truncate'>{hospital?.hospital?._id}</p> */}
           </div>
         </div>
 

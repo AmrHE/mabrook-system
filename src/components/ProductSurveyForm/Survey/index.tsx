@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function SurveyForm({ products, id, userToken } : {products: any, id: string, userToken: string | undefined}) {
   const [isLoading, setIsLoading] = useState(false)
@@ -52,10 +53,10 @@ export default function SurveyForm({ products, id, userToken } : {products: any,
 
     const data = await res.json();
       if (!res.ok) {
-        alert('حدث خطأ ما أثناء إضافة الأسئلة. الرجاء المحاولة مرة أخرى.');
+        toast.error('حدث خطأ ما أثناء إضافة الأسئلة. الرجاء المحاولة مرة أخرى.');
         setIsLoading(false)
       }
-      alert('تمت إضافة الأسئلة بنجاح!');
+      toast.success('تمت إضافة الأسئلة بنجاح!');
       router.push(`/moms/${id}`);
       console.log("Questions added successfully:", data);
   };

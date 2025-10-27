@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react'
+import { toast } from 'sonner';
 
 const CreateNewProduct = ({userToken}: {userToken: string | undefined}) => {
   const [name, setName] = useState("");
@@ -41,11 +42,11 @@ const CreateNewProduct = ({userToken}: {userToken: string | undefined}) => {
       setCreatedProduct(data.product);
 
       if (!res.ok) {
-        alert('حدث خطأ ما أثناء إضافة المنتج. الرجاء المحاولة مرة أخرى.');
+        toast.error('حدث خطأ ما أثناء إضافة المنتج. الرجاء المحاولة مرة أخرى.');
         setIsLoading(false)
       }
       setResponseMessage('Product created successfully!');
-      alert('تمت إضافة المنتج بنجاح!');
+      toast.success('تمت إضافة المنتج بنجاح!');
       router.push(`/products/${data.product._id}`);
     } catch (error: any) {
       setResponseMessage(`Error: ${error.message}`);

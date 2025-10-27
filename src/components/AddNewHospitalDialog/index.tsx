@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 const AddNewHospitalDialog = ({userToken}: {userToken: string | undefined}) => {
   // State for controlled inputs
@@ -41,12 +42,12 @@ const AddNewHospitalDialog = ({userToken}: {userToken: string | undefined}) => {
     const data = await res.json();
 
     if (res.status === 201) {
-      alert('تمت إضافة المستشفى بنجاح!');
+      toast.success('تمت إضافة المستشفى بنجاح!');
       router.push(`/hospitals/${data.hospital._id}`)
     } else {
-      alert('حدث خطأ ما أثناء إضافة المستشفى. الرجاء المحاولة مرة أخرى.');
+      toast.error('حدث خطأ ما أثناء إضافة المستشفى. الرجاء المحاولة مرة أخرى.');
+      toast.error(data.message);
       setIsLoading(false);
-      console.log('error', data.message);
     }
   }
 

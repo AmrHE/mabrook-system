@@ -14,10 +14,10 @@ type Mom = {
 }
 
 export const columns: ColumnDef<Mom>[] = [
-  {
-    accessorKey: "id",
-    header: "رقم الأم",
-  },
+  // {
+  //   accessorKey: "id",
+  //   header: "رقم الأم",
+  // },
   {
     accessorKey: "name",
     header: "اسم الأم",

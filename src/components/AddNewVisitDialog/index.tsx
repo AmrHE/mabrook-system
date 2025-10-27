@@ -10,6 +10,7 @@ import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,}  from "@/components/ui/command"
 import {Popover,PopoverContent,PopoverTrigger,} from "@/components/ui/popover"
+import { toast } from 'sonner';
 
 type Hospital = {
   _id: string;
@@ -73,12 +74,12 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
     const data = await res.json();
 
     if (res.status === 201) {
-      alert('تمت إضافة الزيارة بنجاح!');
+      toast.success('تمت إضافة الزيارة بنجاح!');
       router.push(`/visits/${data.visit._id}`)
     } else {
-      alert('حدث خطأ ما أثناء إضافة الزيارة. الرجاء المحاولة مرة أخرى.');
+      toast.error('حدث خطأ ما أثناء إضافة الزيارة. الرجاء المحاولة مرة أخرى.');
       setIsLoading(false)
-      console.log('error', data.message);
+      toast.error(data.message);
     }
 
   }

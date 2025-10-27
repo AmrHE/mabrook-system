@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { toast } from 'sonner';
 
 const EditProductForm = ({userToken, product}: {userToken: string | undefined, product: any}) => {
   const params = useParams();
@@ -64,14 +65,16 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
       setUpdatedProduct(data.product);
 
       if (!res.ok) {
-        alert('حدث خطأ ما أثناء تعديل المنتج. الرجاء المحاولة مرة أخرى.');
+        toast.error('حدث خطأ ما أثناء تعديل المنتج. الرجاء المحاولة مرة أخرى.');
         setIsLoading(false)
       }
-      alert('تمت تعديل المنتج بنجاح!');
+      toast.success('تمت تعديل المنتج بنجاح!');
       setResponseMessage('Mom submitted successfully!');
       router.push(`/products/${productId}`);
 
     } catch (error: any) {
+      toast.error('حدث خطأ ما أثناء تعديل المنتج. الرجاء المحاولة مرة أخرى.');
+      toast.error(`Error: ${error.message}`);
       setResponseMessage(`Error: ${error.message}`);
     }
   };

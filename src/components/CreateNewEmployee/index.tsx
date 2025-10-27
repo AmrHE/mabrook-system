@@ -8,6 +8,7 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button';
 import { userRoles } from '@/models/enum.constants';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 
 const CreateNewEmployee = ({userToken}: {userToken: string | undefined}) => {
@@ -46,12 +47,12 @@ const CreateNewEmployee = ({userToken}: {userToken: string | undefined}) => {
       setUpdatedUser(data.user);
 
       if (!res.ok) {
-        alert('حدث خطأ ما أثناء إضافة الموظف. الرجاء المحاولة مرة أخرى.');
+        toast.error('حدث خطأ ما أثناء إضافة الموظف. الرجاء المحاولة مرة أخرى.');
         setIsLoading(false)
       }
 
       setResponseMessage('Mom submitted successfully!');
-      alert('تمت إضافة الموظف بنجاح!');
+      toast.success('تمت إضافة الموظف بنجاح!');
       router.push(`/employees/${data.user._id}`)
     } catch (error: any) {
       setResponseMessage(`Error: ${error.message}`);
