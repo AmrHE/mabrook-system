@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { cookies, headers } from 'next/headers';
 import React from 'react'
