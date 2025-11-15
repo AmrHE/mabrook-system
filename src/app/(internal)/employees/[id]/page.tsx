@@ -25,8 +25,8 @@ async function getdEmployeeData(id: string, userToken: any) {
   return res.json();
 }
 
-const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }> }) => {
-  const { id } = await params;
+const SingledEmployeePage = async ({ params }: { params: { id: string } }) => {
+  const { id } = params;
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
   const userRole = cookieStore.get('role')?.value;
