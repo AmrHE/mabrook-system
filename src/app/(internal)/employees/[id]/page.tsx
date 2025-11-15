@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { cookies, headers } from 'next/headers';
 import React from 'react'
@@ -25,8 +27,8 @@ async function getdEmployeeData(id: string, userToken: any) {
   return res.json();
 }
 
-const SingledEmployeePage = async ({ params }: { params: { id: string } }) => {
-  const { id } = params;
+const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
   const userRole = cookieStore.get('role')?.value;
