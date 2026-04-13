@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       firstName,
       lastName,
       email,
-      hashedPassword: password,
+      passwordHash: password,
       phoneNumber,
       role
     });
