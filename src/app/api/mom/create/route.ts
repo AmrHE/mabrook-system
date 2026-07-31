@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import mongoose from 'mongoose';
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
