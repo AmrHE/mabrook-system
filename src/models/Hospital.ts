@@ -31,6 +31,14 @@ const HospitalSchema = new mongoose.Schema({
 
   district: String,
 
+  // Geographic anchor for geofencing shift/visit check-ins. Optional: hospitals
+  // created before this feature have no coordinates until an admin sets them
+  // (check-ins against them record fenceStatus HOSPITAL_NOT_CONFIGURED).
+  location: {
+    lat: Number,
+    lng: Number,
+  },
+
   productStocks: [{
     product: { 
       type: mongoose.Schema.Types.ObjectId, 

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 // import { userRoles } from "@/models/enum.constants";
 import { Hospital } from "@/models/Hospital";
+import { User } from "@/models/User";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
 
@@ -45,5 +46,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({status: 404, message: "No hospital found with the provided ID"})
   }
 
-  return NextResponse.json({ message: "Hospital fetched successfully", hospital }, { status: 200 });
+  // Employees assigned to this hospital (reverse of User.assignedHospitals).
+  const assignedEmployees = await User
+    .find({ assignedHospitals: id, isActive: true })
+    .select('firstName lastName email')
+    .lean();
+
+  return NextResponse.json({ message: "Hospital fetched successfully", hospital, assignedEmployees }, { status: 200 });
 }

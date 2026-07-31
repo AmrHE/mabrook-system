@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { initDb } from '../../../../lib/mongoose';
 import { Hospital } from '@/models/Hospital';
 import { Product } from '@/models/Product';
+import { resolveCity, resolveDistrict } from '@/utils/geo/locations.server';
 
 export async function POST(req: NextRequest) {
   await initDb();
@@ -24,11 +25,30 @@ export async function POST(req: NextRequest) {
   }
   /***************AUTH GAURD END****************/
 
-  const { name, district, city } = await req.json();
+  const { name, district, city, location } = await req.json();
   if (!name || !district || !city) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
+  // City/district must come from the approved list (prevents free-text spelling
+  // drift like جدة/جده). resolveCity/resolveDistrict fold trivial variants back to
+  // the canonical spelling, which is what we store.
+  const canonicalCity = await resolveCity(city);
+  if (!canonicalCity) {
+    return NextResponse.json({ error: 'المدينة غير موجودة في القائمة المعتمدة' }, { status: 400 });
+  }
+  const canonicalDistrict = await resolveDistrict(canonicalCity, district);
+  if (!canonicalDistrict) {
+    return NextResponse.json({ error: 'الحي غير موجود في القائمة المعتمدة لهذه المدينة' }, { status: 400 });
+  }
+
+  // Location is optional at creation — admins can backfill it later. Only keep a
+  // pair when both values are finite numbers.
+  const loc = location as { lat?: unknown; lng?: unknown } | null | undefined;
+  const sanitizedLocation =
+    loc && Number.isFinite(Number(loc.lat)) && Number.isFinite(Number(loc.lng))
+      ? { lat: Number(loc.lat), lng: Number(loc.lng) }
+      : undefined;
 
   const existingHostpital = await Hospital.findOne({ name });
   if (existingHostpital) {
@@ -44,8 +64,9 @@ export async function POST(req: NextRequest) {
 
   const newHospital = await Hospital.create({
     name,
-    district,
-    city,
+    district: canonicalDistrict,
+    city: canonicalCity,
+    location: sanitizedLocation,
     createdBy: userPayload._id,
     productStocks,
   });

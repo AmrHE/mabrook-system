@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
@@ -17,12 +18,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import type { LatLng } from '@/components/HospitalLocationPicker';
+import LocationPicker from '@/components/LocationPicker';
 
-const AddNewHospitalDialog = ({userToken}: {userToken: string | undefined}) => {
+// Leaflet must never run on the server.
+const HospitalLocationPicker = dynamic(() => import('@/components/HospitalLocationPicker'), { ssr: false });
+
+const AddNewHospitalDialog = ({userToken, isAdmin}: {userToken: string | undefined; isAdmin?: boolean}) => {
   // State for controlled inputs
   const [hospitalName, setHospitalName] = useState('');
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
+  const [location, setLocation] = useState<LatLng | null>(null);
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
@@ -37,6 +44,7 @@ const AddNewHospitalDialog = ({userToken}: {userToken: string | undefined}) => {
         name: hospitalName,
         district,
         city,
+        location: location ?? undefined,
       }),
     });
     const data = await res.json();
@@ -61,7 +69,12 @@ const AddNewHospitalDialog = ({userToken}: {userToken: string | undefined}) => {
           <Plus />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-lg max-h-[90vh] overflow-y-auto"
+        // Keep the dialog open when interacting with the city/district combobox,
+        // whose Popover renders in a portal outside the dialog subtree.
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>اضف مستشفى جديدة</DialogTitle>
           <DialogDescription>قم بأدخال بيانات المستشفى</DialogDescription>
@@ -77,25 +90,19 @@ const AddNewHospitalDialog = ({userToken}: {userToken: string | undefined}) => {
             onChange={(e) => setHospitalName(e.target.value)}
           />
 
-          <Label htmlFor="city" className="sr-only">
-            المدينة
-          </Label>
-          <Input
-            placeholder="المدينة"
-            id="city"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
+          <LocationPicker
+            city={city}
+            district={district}
+            onChange={({ city, district }) => {
+              setCity(city);
+              setDistrict(district);
+            }}
+            userToken={userToken}
+            isAdmin={isAdmin}
           />
 
-          <Label htmlFor="district" className="sr-only">
-            الحي/المنطقة
-          </Label>
-          <Input
-            placeholder="الحي/المنطقة"
-            id="district"
-            value={district}
-            onChange={(e) => setDistrict(e.target.value)}
-          />
+          <Label className="mt-2 text-sm text-gray-600">موقع المستشفى (لتقييد تسجيل الحضور)</Label>
+          <HospitalLocationPicker value={location} onChange={setLocation} />
         </div>
         <DialogFooter className="sm:justify-start">
           <Button type="button" className='bg-[#5570F1] hover:bg-[#5570F1]' onClick={handleAddNewHospital} disabled={isLoading}>

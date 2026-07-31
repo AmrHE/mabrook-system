@@ -10,6 +10,8 @@ import {
 import HospitalStockDetails from '@/components/HospitalStockDetails';
 import { userRoles } from '@/models/enum.constants';
 import DeleteHospitalButton from '@/components/DeleteHospitalButton';
+import EditHospitalForm from '@/components/EditHospitalForm';
+import LocationModal from '@/components/LocationModal';
 
 async function getHospitalData(id: string, userToken: any) {
   const headersList = await headers();
@@ -30,21 +32,30 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
   const userRole = cookieStore.get('role')?.value;
+  const isAdmin = userRole === userRoles.ADMIN;
 
 
   const { id } = await params;
   const hospital = await getHospitalData(id, userToken);
 
+  const h = hospital?.hospital;
+  const hasLocation = h?.location?.lat != null && h?.location?.lng != null;
+  const assignedEmployees: any[] = hospital?.assignedEmployees || [];
+  const assignedNames = assignedEmployees.map((e) => `${e.firstName ?? ''} ${e.lastName ?? ''}`.trim()).filter(Boolean).join('، ');
+
   return (
     <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
       {hospital && (
-        <h1 className='text-gray-800 font-bold text-3xl mb-10'>مستشفى {hospital.hospital.name}</h1>
+        <h1 className='text-gray-800 font-bold text-3xl mb-10'>مستشفى {h?.name}</h1>
       )}
 
       <Tabs dir='rtl' defaultValue="hospitalDetails" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <TabsTrigger value="hospitalDetails" className='cursor-pointer'>تفاصيل المستشفى</TabsTrigger>
         <TabsTrigger value="productDetails" className='cursor-pointer'>تفاصيل المنتجات</TabsTrigger>
+        {isAdmin && (
+          <TabsTrigger value="editHospital" className='cursor-pointer'>تعديل البيانات</TabsTrigger>
+        )}
       </TabsList>
       <TabsContent value="hospitalDetails">
         <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل المستشفى</h4>
@@ -53,52 +64,62 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
             <p>اسم المستشفى</p>
             <p>المدينة</p>
             <p>الحي</p>
-            {/* <p>رقم المستشفى</p> */}
-
+            <p>الموقع الجغرافي</p>
           </div>
           <div className='flex flex-col gap-5'>
-            <p>{hospital?.hospital?.name}</p>
-            <p>{hospital?.hospital?.city}</p>
-            <p>{hospital?.hospital?.district}</p>
-            {/* <p className='max-w-28 truncate'>{hospital?.hospital?._id}</p> */}
+            <p>{h?.name}</p>
+            <p>{h?.city}</p>
+            <p>{h?.district}</p>
+            {hasLocation ? (
+              <LocationModal start={h.location} title="موقع المستشفى" startLabel="المستشفى" />
+            ) : (
+              <span className='text-amber-600'>غير محدد</span>
+            )}
           </div>
         </div>
 
-        <h4 className='mt-12 mb-4 font-semibold text-gray-700 text-xl'>تفاصيل الموظف</h4>
+        <h4 className='mt-12 mb-4 font-semibold text-gray-700 text-xl'>الموظفون المعينون</h4>
         <div className='flex max-w-[350px] justify-between'>
           <div className='flex flex-col gap-5'>
-            <p>اسم الموظف</p>
-            {/* <p>ايميل الموظف</p> */}
+            <p>الموظفون المعينون</p>
             <p>توقيت الاضافة</p>
-            {/* <p>اسم الموظف</p> */}
           </div>
           <div className='flex flex-col gap-5'>
-            <p>{`${hospital?.hospital?.createdBy.firstName} ${hospital?.hospital?.createdBy.lastName}`}</p>
-            {/* <p className='max-w-28 truncate'>{hospital.hospital.createdBy.email}</p> */}
-            <p>{new Date(hospital?.hospital?.createdAt).toLocaleString("en-SA", {
+            <p>{assignedNames || <span className='text-gray-400'>لا يوجد موظفون معينون</span>}</p>
+            <p>{new Date(h?.createdAt).toLocaleString("en-SA", {
                 timeZone: "Asia/Riyadh",
                 dateStyle: "medium",
                 timeStyle: "short",
               })}</p>
-            {/* <p>{new Date(hospital.hospital.startTime).toLocaleString("en-SA", {
-                timeZone: "Asia/Riyadh",
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}</p> */}
           </div>
         </div>
 
-        <div className='mt-10'>
-          {userRole === userRoles.ADMIN && (
+        <div className='mt-10 flex flex-wrap items-center gap-4'>
+          {isAdmin && (
             <DeleteHospitalButton id={id} userToken={userToken!} />
           )}
         </div>
 
-        
+
       </TabsContent>
       <TabsContent value="productDetails">
-        <HospitalStockDetails userToken={userToken} productStocks={hospital?.hospital?.productStocks} />
+        <HospitalStockDetails userToken={userToken} productStocks={h?.productStocks} />
       </TabsContent>
+      {isAdmin && (
+        <TabsContent value="editHospital">
+          <h4 className='mt-8 mb-2 font-semibold text-gray-700 text-xl'>تعديل بيانات المستشفى</h4>
+          <EditHospitalForm
+            id={id}
+            userToken={userToken!}
+            initialName={h?.name}
+            initialCity={h?.city}
+            initialDistrict={h?.district}
+            initialLocation={hasLocation ? h.location : null}
+            initialAssignedEmployeeIds={assignedEmployees.map((e) => e._id)}
+            isAdmin={isAdmin}
+          />
+        </TabsContent>
+      )}
     </Tabs>
     </div>
   )

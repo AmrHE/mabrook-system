@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { Hospital } from "@/models/Hospital";
+import { User } from "@/models/User";
 // import { Product } from "@/models/Product";
 
 export async function GET(req: NextRequest) {
@@ -24,7 +26,26 @@ export async function GET(req: NextRequest) {
   const hospitals = await Hospital
   .find({ isActive: true })
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
-  .sort({ createdAt: -1 });
+  .sort({ createdAt: -1 })
+  .lean();
+
+  // Attach the employees assigned to each hospital (reverse of User.assignedHospitals).
+  const employees = await User
+    .find({ assignedHospitals: { $in: hospitals.map((h: any) => h._id) }, isActive: true })
+    .select('firstName lastName email assignedHospitals')
+    .lean();
+
+  const byHospital = new Map<string, any[]>();
+  for (const e of employees as any[]) {
+    for (const hid of e.assignedHospitals || []) {
+      const key = String(hid);
+      if (!byHospital.has(key)) byHospital.set(key, []);
+      byHospital.get(key)!.push({ _id: e._id, firstName: e.firstName, lastName: e.lastName, email: e.email });
+    }
+  }
+  for (const h of hospitals as any[]) {
+    h.assignedEmployees = byHospital.get(String(h._id)) || [];
+  }
 
 
   // ONE TIME SCRIPT TO SYNC HOSPITAL PRODUCTS WITH THE CURRENT PRODUCTS LIST IN THE DATABASE -- USE IF NEEDED
