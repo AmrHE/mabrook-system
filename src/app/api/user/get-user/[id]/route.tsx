@@ -29,7 +29,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const user = await User.findById(id)
-  .populate({path: "visits", model: "Visit", select: "isActive"})
+  .populate({
+    path: "visits",
+    model: "Visit",
+    select: "hospitalId moms status isActive createdAt startLocation endLocation",
+    populate: { path: "hospitalId", model: "Hospital", select: "name city district" },
+  })
+  .populate({path: "assignedHospitals", model: "Hospital", select: "name city district"})
   .lean()
   .sort({ createdAt: -1 });//remove this sort function and check this line all over the codebase
 

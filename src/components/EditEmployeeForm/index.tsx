@@ -10,7 +10,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import { userRoles } from '@/models/enum.constants';
 import { toast } from 'sonner';
+import HospitalMultiSelect from '../HospitalMultiSelect';
+import IdentityImageUpload from '../IdentityImageUpload';
 
+/** assignedHospitals may arrive populated ({_id,...}) or as raw id strings. */
+const toHospitalIds = (list: any): string[] =>
+  (list || []).map((h: any) => (typeof h === 'string' ? h : h?._id)).filter(Boolean);
 
 const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined, employee: any}) => {
   const params = useParams();
@@ -22,10 +27,32 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
   const [password, setPassword] = useState<string|null>(null)
   const [updatedUser, setUpdatedUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<userRoles | null>(null)
+  const [salary, setSalary] = useState<number|null>(null)
+  const [iban, setIban] = useState<string|null>(null)
+  const [bankName, setBankName] = useState<string|null>(null)
+  const [identityNumber, setIdentityNumber] = useState<string|null>(null)
+  const [identityImage, setIdentityImage] = useState<string|null>(null)
+  const [assignedHospitals, setAssignedHospitals] = useState<string[]>([])
+  const [project, setProject] = useState<string>('mabrook')
+  const [projects, setProjects] = useState<string[]>(['mabrook'])
   const [responseMessage, setResponseMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter();
 
+  useEffect(() => {
+    let active = true;
+    fetch('/api/projects')
+      .then((r) => r.json())
+      .then((d) => {
+        if (active && Array.isArray(d.projects) && d.projects.length) {
+          setProjects(d.projects);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if(employee) {
@@ -35,9 +62,16 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
       setEmail(employee.user.email);
       setUserRole(employee.user.role);
       setPassword(employee.user.passwordHash);
+      setSalary(employee.user.salary ?? null);
+      setIban(employee.user.iban ?? null);
+      setBankName(employee.user.bankName ?? null);
+      setIdentityNumber(employee.user.identityNumber ?? null);
+      setIdentityImage(employee.user.identityImage ?? null);
+      setAssignedHospitals(toHospitalIds(employee.user.assignedHospitals));
+      setProject(employee.user.project ?? 'mabrook');
     }
   }, [employee]);
-  
+
   useEffect(() => {
     if(updatedUser) {
       setFirstName(updatedUser.firstName);
@@ -46,6 +80,13 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
       setEmail(updatedUser.email);
       setUserRole(updatedUser.role);
       setPassword(updatedUser.passwordHash);
+      setSalary(updatedUser.salary ?? null);
+      setIban(updatedUser.iban ?? null);
+      setBankName(updatedUser.bankName ?? null);
+      setIdentityNumber(updatedUser.identityNumber ?? null);
+      setIdentityImage(updatedUser.identityImage ?? null);
+      setAssignedHospitals(toHospitalIds(updatedUser.assignedHospitals));
+      setProject(updatedUser.project ?? 'mabrook');
     }
   }, [updatedUser]);
 
@@ -65,7 +106,14 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
           phoneNumber,
           email,
           userRole,
-          password
+          password,
+          salary,
+          iban,
+          bankName,
+          identityNumber,
+          identityImage,
+          assignedHospitals,
+          project,
         }),
       });
 
@@ -133,6 +181,9 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
         onChange={(e) => setEmail(e.target.value)}
       />
 
+      <Label htmlFor="role">
+        الدور الوظيفي
+      </Label>
         <Select
           value={userRole ? userRole : ""}
           onValueChange={(value: userRoles) => setUserRole(value as userRoles)}
@@ -155,6 +206,25 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
           </SelectContent>
         </Select>
 
+      <Label htmlFor="project">
+        المشروع
+      </Label>
+      <Select
+        value={project}
+        onValueChange={(value: string) => setProject(value)}
+      >
+        <SelectTrigger id="project">
+          <SelectValue placeholder="اختر المشروع" />
+        </SelectTrigger>
+        <SelectContent>
+          {[...new Set([project, ...projects])].filter(Boolean).map((p) => (
+            <SelectItem key={p} value={p}>
+              {p}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       <Label htmlFor="password">
         كلمة المرور
       </Label>
@@ -164,6 +234,57 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
         value={password? password : ''}
         onChange={(e) => setPassword(e.target.value)}
       />
+
+      <Label htmlFor="salary">
+        الراتب
+      </Label>
+      <Input
+        type='number'
+        placeholder="الراتب"
+        id="salary"
+        value={salary ?? ''}
+        onChange={(e) => setSalary(e.target.value === '' ? null : Number(e.target.value))}
+      />
+
+      <Label>
+        المستشفيات المعيّنة
+      </Label>
+      <HospitalMultiSelect userToken={userToken} value={assignedHospitals} onChange={setAssignedHospitals} />
+
+      <Label htmlFor="iban">
+        رقم الآيبان (IBAN)
+      </Label>
+      <Input
+        placeholder="رقم الآيبان"
+        id="iban"
+        value={iban ?? ''}
+        onChange={(e) => setIban(e.target.value)}
+      />
+
+      <Label htmlFor="bankName">
+        اسم البنك
+      </Label>
+      <Input
+        placeholder="اسم البنك"
+        id="bankName"
+        value={bankName ?? ''}
+        onChange={(e) => setBankName(e.target.value)}
+      />
+
+      <Label htmlFor="identityNumber">
+        رقم الهوية
+      </Label>
+      <Input
+        placeholder="رقم الهوية"
+        id="identityNumber"
+        value={identityNumber ?? ''}
+        onChange={(e) => setIdentityNumber(e.target.value)}
+      />
+
+      <Label>
+        صورة الهوية
+      </Label>
+      <IdentityImageUpload value={identityImage} onChange={setIdentityImage} />
 
       <div className='flex items-center justify-center w-full mt-4'>
         <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>

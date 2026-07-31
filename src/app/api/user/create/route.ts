@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { userRoles } from "@/models/enum.constants";
 import { initDb } from "../../../../lib/mongoose";
 import { User } from "@/models/User";
+import { resolveProject } from "@/utils/project/projects.server";
 
 
 
@@ -23,7 +24,21 @@ export async function POST(req: NextRequest) {
   }
   /***************ADMIN GAURD END****************/
 
-  const { firstName, lastName, email, password, phoneNumber, role } = await req.json();
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    phoneNumber,
+    role,
+    salary,
+    iban,
+    bankName,
+    identityNumber,
+    identityImage,
+    assignedHospitals,
+    project,
+  } = await req.json();
 
   if (!firstName || !lastName || !email || !password || !phoneNumber || !role) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
@@ -36,6 +51,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User already exists" }, { status: 409 });
     }
 
+    // Canonicalize against the valid set (base ∪ admin additions); unknown/blank
+    // values fall back to the default project.
+    const resolvedProject = (await resolveProject(project)) ?? "mabrook";
+
     // const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await User.create({
@@ -44,7 +63,14 @@ export async function POST(req: NextRequest) {
       email,
       passwordHash: password,
       phoneNumber,
-      role
+      role,
+      salary,
+      iban,
+      bankName,
+      identityNumber,
+      identityImage,
+      assignedHospitals: assignedHospitals ?? [],
+      project: resolvedProject,
     });
 
     return NextResponse.json({ message: "User created", user: newUser }, { status: 201 });

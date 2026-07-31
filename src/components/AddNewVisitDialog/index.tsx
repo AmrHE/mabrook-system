@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import {Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,}  from "@/components/ui/command"
 import {Popover,PopoverContent,PopoverTrigger,} from "@/components/ui/popover"
 import { toast } from 'sonner';
+import { warnOnFence } from '@/utils/geo/fenceToast';
 
 type Hospital = {
   _id: string;
@@ -22,16 +23,15 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [open, setOpen] = useState(false) // Changed from true to false
   const [value, setValue] = useState("")
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [startLocation, setStartLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     if ('geolocation' in navigator) {
-      console.log('Geolocation is available');
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setLocation({
+          setStartLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
@@ -41,7 +41,8 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
   }, []);
 
   useEffect(() => {
-    fetch('/api/hospitals/get-hospitals', {
+    // Only hospitals assigned to this employee may be visited.
+    fetch('/api/hospitals/assigned', {
       method: 'GET',
       headers: {
         authorization: `Bearer ${userToken}`,
@@ -55,26 +56,36 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
         }
       })
       .catch(error => console.error('Error fetching hospitals:', error));
-  }, [])
+  }, [userToken])
 
 
   const handleAddNewVisit = async () => {
+    if (!value) {
+      toast.error('الرجاء اختيار المستشفى');
+      return;
+    }
+    if (!startLocation) {
+      toast.error('تعذّر تحديد موقعك. الرجاء السماح بالوصول إلى الموقع والمحاولة مرة أخرى.');
+      return;
+    }
     setIsLoading(true)
     const res = await fetch('/api/visit/create', {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         authorization: `Bearer ${userToken}`,
       },
       body: JSON.stringify({
         hospitalId: value,
         shiftId,
-        location,
+        startLocation,
       }),
     });
     const data = await res.json();
 
     if (res.status === 201) {
       toast.success('تمت إضافة الزيارة بنجاح!');
+      warnOnFence(data.visit?.startFenceStatus, data.visit?.startDistanceMeters, 'visit');
       router.push(`/visits/${data.visit._id}`)
     } else {
       toast.error('حدث خطأ ما أثناء إضافة الزيارة. الرجاء المحاولة مرة أخرى.');

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { shiftStatus } from './enum.constants';
+import { shiftStatus, fenceStatus } from './enum.constants';
 
 const VisitSchema = new mongoose.Schema({
   createdAt: {
@@ -37,10 +37,25 @@ const VisitSchema = new mongoose.Schema({
     default: [],
   },
 
-  location: {
+  // Where the employee was when the visit started / ended (device GPS), mirroring
+  // the Shift model's startLocation / endLocation.
+  startLocation: {
     lat: Number,
     lng: Number,
   },
+  endLocation: {
+    lat: Number,
+    lng: Number,
+  },
+
+  // Geofence classification of the visit check-in against its hospital (soft; never blocks).
+  startFenceStatus: {
+    type: String,
+    enum: fenceStatus,
+    default: undefined,
+  },
+  startDistanceMeters: { type: Number, default: undefined },
+
   status : {
     type: String,
     enum: shiftStatus, 

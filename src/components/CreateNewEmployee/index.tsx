@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Label } from '../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Input } from '../ui/input'
@@ -9,6 +9,8 @@ import { Button } from '../ui/button';
 import { userRoles } from '@/models/enum.constants';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import HospitalMultiSelect from '../HospitalMultiSelect';
+import IdentityImageUpload from '../IdentityImageUpload';
 
 
 const CreateNewEmployee = ({userToken}: {userToken: string | undefined}) => {
@@ -19,9 +21,32 @@ const CreateNewEmployee = ({userToken}: {userToken: string | undefined}) => {
   const [password, setPassword] = useState<string|null>(null)
   const [updatedUser, setUpdatedUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<userRoles | null>(null)
+  const [salary, setSalary] = useState<number|null>(null)
+  const [iban, setIban] = useState<string|null>(null)
+  const [bankName, setBankName] = useState<string|null>(null)
+  const [identityNumber, setIdentityNumber] = useState<string|null>(null)
+  const [identityImage, setIdentityImage] = useState<string|null>(null)
+  const [assignedHospitals, setAssignedHospitals] = useState<string[]>([])
+  const [project, setProject] = useState<string>('mabrook')
+  const [projects, setProjects] = useState<string[]>(['mabrook'])
   const [responseMessage, setResponseMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter();
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/projects')
+      .then((r) => r.json())
+      .then((d) => {
+        if (active && Array.isArray(d.projects) && d.projects.length) {
+          setProjects(d.projects);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -40,6 +65,13 @@ const CreateNewEmployee = ({userToken}: {userToken: string | undefined}) => {
           email,
           role: userRole,
           password,
+          salary,
+          iban,
+          bankName,
+          identityNumber,
+          identityImage,
+          assignedHospitals,
+          project,
         }),
       });
 
@@ -127,6 +159,26 @@ const CreateNewEmployee = ({userToken}: {userToken: string | undefined}) => {
           </SelectContent>
         </Select>
 
+      <Label htmlFor="project">
+        المشروع
+      </Label>
+      <Select
+        value={project}
+        onValueChange={(value: string) => setProject(value)}
+      >
+        <SelectTrigger id="project">
+          <SelectValue placeholder="اختر المشروع" />
+        </SelectTrigger>
+        <SelectContent>
+          {projects.map((p) => (
+            <SelectItem key={p} value={p}>
+              {p}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className='text-sm text-gray-400 -mt-4'>يمكن للمدير إضافة مشاريع جديدة من صفحة الإعدادات.</p>
+
       <Label htmlFor="password">
         كلمة المرور
       </Label>
@@ -137,6 +189,57 @@ const CreateNewEmployee = ({userToken}: {userToken: string | undefined}) => {
         onChange={(e) => setPassword(e.target.value)}
       />
       <p className='text-sm text-red-500 -mt-4'>إذا قمت بتعديل كلمة المرور يرجى نسخها وحفظها، حيث لن تتمكن من عرضها مرة أخرى.</p>
+
+      <Label htmlFor="salary">
+        الراتب
+      </Label>
+      <Input
+        type='number'
+        placeholder="الراتب"
+        id="salary"
+        value={salary ?? ''}
+        onChange={(e) => setSalary(e.target.value === '' ? null : Number(e.target.value))}
+      />
+
+      <Label>
+        المستشفيات المعيّنة
+      </Label>
+      <HospitalMultiSelect userToken={userToken} value={assignedHospitals} onChange={setAssignedHospitals} />
+
+      <Label htmlFor="iban">
+        رقم الآيبان (IBAN)
+      </Label>
+      <Input
+        placeholder="رقم الآيبان"
+        id="iban"
+        value={iban ?? ''}
+        onChange={(e) => setIban(e.target.value)}
+      />
+
+      <Label htmlFor="bankName">
+        اسم البنك
+      </Label>
+      <Input
+        placeholder="اسم البنك"
+        id="bankName"
+        value={bankName ?? ''}
+        onChange={(e) => setBankName(e.target.value)}
+      />
+
+      <Label htmlFor="identityNumber">
+        رقم الهوية
+      </Label>
+      <Input
+        placeholder="رقم الهوية"
+        id="identityNumber"
+        value={identityNumber ?? ''}
+        onChange={(e) => setIdentityNumber(e.target.value)}
+      />
+
+      <Label>
+        صورة الهوية
+      </Label>
+      <IdentityImageUpload value={identityImage} onChange={setIdentityImage} />
 
       <div className='flex items-center justify-center w-full mt-4'>
         <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>

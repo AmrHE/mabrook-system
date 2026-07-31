@@ -5,7 +5,7 @@ import { Visit } from "@/models/Visit";
 import { shiftStatus } from "@/models/enum.constants";
 import { cookies } from "next/headers";
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
   const { id } = await params;
 
   await initDb();
@@ -22,9 +22,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
 
+  // End location is captured on the device when the employee ends the visit,
+  // mirroring how a shift records its endLocation on check-out.
+  const { endLocation } = await req.json();
+  if (!endLocation) {
+    return NextResponse.json({ status: 400, message: "Missing end location" }, { status: 400 });
+  }
+
   const endVisit = await Visit.findOneAndUpdate(
-    {_id: id}, 
-    {status: shiftStatus.ENDED, endTime: Date.now()},
+    {_id: id},
+    {status: shiftStatus.ENDED, endTime: Date.now(), endLocation},
     {new: true}
   );
 

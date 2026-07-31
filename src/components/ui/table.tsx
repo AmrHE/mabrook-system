@@ -4,11 +4,24 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  containerClassName,
+  ...props
+}: React.ComponentProps<"table"> & { containerClassName?: string }) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      // Arabic-first app: every table renders right-to-left regardless of any
+      // ancestor direction (e.g. a Radix Tabs root that defaults to ltr).
+      dir="rtl"
+      // Scroll the table body while keeping the header pinned. `max-h` bounds the
+      // scroll area; short tables render at natural height. Override via
+      // `containerClassName` (e.g. a taller/shorter cap) on a per-table basis.
+      className={cn(
+        "relative w-full overflow-auto max-h-[70vh]",
+        containerClassName
+      )}
     >
       <table
         data-slot="table"
@@ -23,7 +36,14 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      // Pin the header (and its sort/filter controls) to the top of the scroll
+      // container. `bg-background` is the opaque backdrop that occludes rows
+      // scrolling underneath; z-10 keeps it above them. The bottom shadow is a
+      // divider that always renders while scrolling (independent of row borders).
+      className={cn(
+        "[&_tr]:border-b [&_tr]:hover:bg-transparent sticky top-0 z-10 bg-background shadow-[0_1px_0_0_var(--border)]",
+        className
+      )}
       {...props}
     />
   )
