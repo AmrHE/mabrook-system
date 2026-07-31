@@ -1,5 +1,5 @@
 "use client"
-import { BookUser, Contact, Home, Hospital, LogOut, Users, Warehouse } from "lucide-react"
+import { BarChart3, BookUser, CalendarDays, Clock, Contact, Home, Hospital, LineChart, LogOut, Settings, Users, Warehouse } from "lucide-react"
 
 import {
   Sidebar,
@@ -48,11 +48,32 @@ const items = [
     url: "/moms",
     icon: Contact,
   },
-  // {
-  //   title: "Settings",
-  //   url: "#",
-  //   icon: Settings,
-  // },
+  {
+    title: "Shifts",
+    url: "/shifts",
+    icon: Clock,
+  },
+  // Visible to every role: anyone can request leave, admins also review it.
+  {
+    title: "Leaves",
+    url: "/leaves",
+    icon: CalendarDays,
+  },
+  {
+    title: "Reports",
+    url: "/reports",
+    icon: BarChart3,
+  },
+  {
+    title: "Analytics",
+    url: "/analytics",
+    icon: LineChart,
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
 ]
 export function AppSidebar({ userRole }: { userRole?: string }) {
   const router = useRouter();  
@@ -76,12 +97,15 @@ export function AppSidebar({ userRole }: { userRole?: string }) {
     <Sidebar collapsible="icon" variant="sidebar" side={dir ==='ltr' ? "left" : "right"}>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="w-full flex items-center justify-center">Application</SidebarGroupLabel>
+          <SidebarGroupLabel className="w-full flex items-center justify-center">Mabrook System</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarSeparator />
             <SidebarMenu>
               {items.map((item) => {
                 if (item.title === "Employees" && userRole !== userRoles.ADMIN) return null;
+                if (item.title === "Reports" && userRole !== userRoles.ADMIN) return null;
+                if (item.title === "Analytics" && userRole !== userRoles.ADMIN) return null;
+                if (item.title === "Settings" && userRole !== userRoles.ADMIN) return null;
                 if (item.title === "Products" && userRole === userRoles.EMPLOYEE) return null;
                 return(
                 <SidebarMenuItem key={item.title}>

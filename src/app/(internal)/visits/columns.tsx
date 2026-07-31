@@ -8,6 +8,7 @@ type Visit = {
   district: string
   momsCount: number
   employeeName: string
+  statusLabel: string
 }
 
 export const columns: ColumnDef<Visit>[] = [
@@ -34,5 +35,9 @@ export const columns: ColumnDef<Visit>[] = [
   {
     accessorKey: "employeeName",
     header: "اسم الموظف",
+  },
+  {
+    accessorKey: "statusLabel",
+    header: "حالة الزيارة",
   },
 ]

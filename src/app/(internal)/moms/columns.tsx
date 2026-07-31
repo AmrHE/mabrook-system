@@ -11,6 +11,8 @@ type Mom = {
   numberOfMales: number;
   numberOfFemales: number;
   hospitalName: string;
+  potential: string;
+  appInstalled: string;
 }
 
 export const columns: ColumnDef<Mom>[] = [
@@ -49,5 +51,13 @@ export const columns: ColumnDef<Mom>[] = [
   {
     accessorKey: "numberOfFemales",
     header: "عدد الإناث",
+  },
+  {
+    accessorKey: "potential",
+    header: "عميل محتمل",
+  },
+  {
+    accessorKey: "appInstalled",
+    header: "تطبيق مثبّت",
   },
 ]

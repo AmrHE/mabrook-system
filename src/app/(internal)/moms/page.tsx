@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { cookies, headers } from 'next/headers';
 import { columns } from "./columns";
-import { ClientDataTable } from './client-data-table';
+import FilterableTable from '@/components/FilterableTable';
+import { isSaudi } from '@/utils/nationality/normalize';
 
 type Mom = {
   id: string;
@@ -13,6 +14,10 @@ type Mom = {
   numberOfMales: number;
   numberOfFemales: number;
   hospitalName: string;
+  potential: string;
+  natGroup: string;
+  appInstalled: string;
+  installedApps: string;
 }
 
 const MomsPage = async () => {
@@ -20,7 +25,7 @@ const MomsPage = async () => {
   const userToken = cookieStore.get('access_token')?.value;
   const headersList = await headers();
   const host = headersList.get('host');
-  
+
   async function getMomsData(userToken: any) {
     const res = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/mom/get-moms`, {
       cache: 'no-store',
@@ -46,14 +51,64 @@ const MomsPage = async () => {
         numberOfMales: mom.numberOfMales,
         numberOfFemales: mom.numberOfFemales,
         hospitalName: mom.visitId.hospitalId.name,
+        potential: mom.allowFutureCom ? 'نعم' : 'لا',
+        natGroup: isSaudi(mom.nationality) ? 'سعودي' : 'غير سعودي',
+        appInstalled: Array.isArray(mom.installedApp) && mom.installedApp.length > 0 ? 'نعم' : 'لا',
+        installedApps: Array.isArray(mom.installedApp) ? mom.installedApp.join('، ') : '',
       });
     });
   }
 
   return (
     <div>
-      <h1 className='text-3xl font-bold p-4 mb-10'>الأمهات</h1>
-      <ClientDataTable columns={columns} data={processedMoms} />
+      <h1 className='text-3xl font-bold p-4 mb-6'>الأمهات</h1>
+      <FilterableTable
+        data={processedMoms}
+        columns={columns}
+        basePath="/moms"
+        filename="moms.csv"
+        searchKeys={['name', 'nationality', 'hospitalName']}
+        searchPlaceholder="ابحث بالاسم أو الجنسية أو المستشفى"
+        filters={[
+          {
+            key: 'potential',
+            label: 'عميل محتمل',
+            options: [
+              { label: 'عملاء محتملون (وافقوا على التواصل)', value: 'نعم' },
+              { label: 'غير مهتمين', value: 'لا' },
+            ],
+          },
+          {
+            key: 'natGroup',
+            label: 'الجنسية',
+            options: [
+              { label: 'سعودية', value: 'سعودي' },
+              { label: 'غير سعودية', value: 'غير سعودي' },
+            ],
+          },
+          {
+            key: 'appInstalled',
+            label: 'تطبيق مثبّت',
+            options: [
+              { label: 'ثبّتوا تطبيقاً', value: 'نعم' },
+              { label: 'بدون تطبيق', value: 'لا' },
+            ],
+          },
+        ]}
+        exportColumns={[
+          { key: 'name', header: 'الاسم' },
+          { key: 'nationality', header: 'الجنسية' },
+          { key: 'address', header: 'العنوان' },
+          { key: 'hospitalName', header: 'المستشفى' },
+          { key: 'numberOfKids', header: 'عدد الأطفال' },
+          { key: 'numberOfnewborns', header: 'عدد المواليد' },
+          { key: 'numberOfMales', header: 'ذكور' },
+          { key: 'numberOfFemales', header: 'إناث' },
+          { key: 'potential', header: 'عميل محتمل' },
+          { key: 'appInstalled', header: 'تطبيق مثبّت' },
+          { key: 'installedApps', header: 'التطبيقات المثبّتة' },
+        ]}
+      />
     </div>
   );
 };

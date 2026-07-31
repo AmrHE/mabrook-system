@@ -8,9 +8,9 @@ type Employee = {
   email: string;
   phoneNumber: string;
   role: string;
-  isOnShift: boolean;
+  onShiftLabel: string;
   visitCount: number;
-} 
+}
 
 export const columns: ColumnDef<Employee>[] = [
   // {
@@ -38,7 +38,7 @@ export const columns: ColumnDef<Employee>[] = [
     header: "الدور الوظيفي",
   },
   {
-    accessorKey: "isOnShift",
+    accessorKey: "onShiftLabel",
     header: "في الدوام الان",
   },
   {

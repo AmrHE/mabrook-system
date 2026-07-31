@@ -1,200 +1,374 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-'use client';
+"use client";
 
-import React, { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { BookHeart, Hospital, MapPinHouse, UserCheck, Users } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import React, { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Baby, BookHeart, Hospital, MapPinHouse, UserCheck, Users } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import DateRangeFilter, { type ResolvedRange } from "@/components/DateRangeFilter";
+import MomsTrendChart from "@/components/charts/MomsTrendChart";
+import HospitalsBarChart from "@/components/charts/HospitalsBarChart";
+import NationalityPieChart from "@/components/charts/NationalityPieChart";
+import GenderDonut from "@/components/charts/GenderDonut";
+import MultipleBirthsChart from "@/components/charts/MultipleBirthsChart";
+import EmployeesBarChart from "@/components/charts/EmployeesBarChart";
+import ProductsConsumptionChart from "@/components/charts/ProductsConsumptionChart";
+import AttentionPanel from "@/components/charts/AttentionPanel";
+import SynchronizedAreaChart from "@/components/charts/SynchronizedAreaChart";
+import HeatmapMatrix from "@/components/charts/HeatmapMatrix";
+import DataQualityPanel from "@/components/charts/DataQualityPanel";
+import DeltaBadge from "@/components/charts/DeltaBadge";
+import { CHART_COLORS, computeDelta, fmtNumber, pct, type Delta, type Granularity } from "@/components/charts/constants";
 
-interface DashboardProps {
-  data: {
-    products: any;
-    employees: any;
-    hospitals: any;
-    visits: any;
-    moms: any;
-  };
+interface AnalyticsData {
+  overview: any | null;
+  timeseries: any[];
+  hospitals: any[];
+  employees: any[];
+  demographics: any | null;
+  products: any[];
+  productThresholds: { outOfStock: number; lowStock: number } | null;
+  openShifts: any[];
+  conversion: any[];
+  heatmap: { data: any[]; max: number };
+  dataQuality: any | null;
 }
 
-const FILTERS = [
-  { label: 'اليوم', value: 'day' },
-  { label: 'الأسبوع الماضي', value: 'week' },
-  { label: 'آخر أسبوعين', value: '2weeks' },
-  { label: 'الشهر الماضي', value: 'month' },
-  { label: 'آخر 3 أشهر', value: '3months' },
-  { label: 'آخر 6 أشهر', value: '6months' },
-  { label: 'السنة الماضية', value: 'year' },
-];
+const EMPTY: AnalyticsData = {
+  overview: null,
+  timeseries: [],
+  hospitals: [],
+  employees: [],
+  demographics: null,
+  products: [],
+  productThresholds: null,
+  openShifts: [],
+  conversion: [],
+  heatmap: { data: [], max: 0 },
+  dataQuality: null,
+};
 
-const AdminDashboardClient: React.FC<DashboardProps> = ({ data }) => {
-  const [filter, setFilter] = useState('6months');
+const AdminDashboardClient: React.FC<{ userToken?: string }> = ({ userToken }) => {
+  const [range, setRange] = useState<ResolvedRange | null>(null);
+  const [granularity, setGranularity] = useState<Granularity>("day");
+  const [data, setData] = useState<AnalyticsData>(EMPTY);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // ⏱️ Compute start date range dynamically
-  const startDate = useMemo(() => {
-    const now = new Date();
-    const date = new Date(now);
+  const granularityRef = useRef(granularity);
+  granularityRef.current = granularity;
 
-    switch (filter) {
-      case 'day':
-        date.setDate(now.getDate() - 1);
-        break;
-      case 'week':
-        date.setDate(now.getDate() - 7);
-        break;
-      case '2weeks':
-        date.setDate(now.getDate() - 14);
-        break;
-      case 'month':
-        date.setMonth(now.getMonth() - 1);
-        break;
-      case '3months':
-        date.setMonth(now.getMonth() - 3);
-        break;
-      case '6months':
-        date.setMonth(now.getMonth() - 6);
-        break;
-      case 'year':
-        date.setFullYear(now.getFullYear() - 1);
-        break;
-    }
-    return date;
-  }, [filter]);
+  const [convGranularity, setConvGranularity] = useState<Granularity>("week");
+  const convGranularityRef = useRef(convGranularity);
+  convGranularityRef.current = convGranularity;
 
-  // 🔍 Filter based on createdAt or date fields
-  const filterByDate = (arr: any[]) =>
-    arr.filter((item) => new Date(item.createdAt) >= startDate);
-
-  const filteredData = {
-    // products: filterByDate(data.products?.products || []),
-    employees: filterByDate(data.employees?.users || []),
-    hospitals: filterByDate(data.hospitals?.hospitals || []),
-    visits: filterByDate(data.visits?.visits || []),
-    moms: filterByDate(data.moms?.moms || []),
-  };
-
-  // Product categories
-  const availableProducts = /*filteredData.*/data.products.products.filter((p: { totalQuantity: number; }) => p.totalQuantity > 200);
-  const lowStockProducts = /*filteredData.*/data.products.products.filter(
-    (p: { totalQuantity: number; }) => p.totalQuantity <= 200 && p.totalQuantity >= 100
+  const authedGet = useCallback(
+    async (path: string) => {
+      const res = await fetch(path, { headers: { authorization: `Bearer ${userToken}` } });
+      if (!res.ok) throw new Error(`فشل تحميل البيانات (${res.status})`);
+      return res.json();
+    },
+    [userToken],
   );
-  const outOfStockProducts = /*filteredData.*/data.products.products.filter((p: { totalQuantity: number; }) => p.totalQuantity < 100);
-  const productsWithoutQuestions = /*filteredData.*/data.products.products.filter(
-    (p: { questions: string | any[]; }) => !p.questions || p.questions.length === 0
+
+  const loadAll = useCallback(
+    async (r: ResolvedRange) => {
+      setLoading(true);
+      setError(null);
+      const qs = `from=${encodeURIComponent(r.from)}&to=${encodeURIComponent(r.to)}`;
+      const g = granularityRef.current;
+      const cg = convGranularityRef.current;
+
+      // Resilient load: one failing endpoint must not blank the whole dashboard.
+      let failed = 0;
+      const wrap = <T,>(p: Promise<any>, fallback: T): Promise<T> =>
+        p.catch(() => {
+          failed++;
+          return fallback;
+        });
+
+      const [overview, timeseries, hospitals, employees, demographics, products, openShifts, conversion, heatmap, dataQuality] =
+        await Promise.all([
+          wrap(authedGet(`/api/analytics/overview?${qs}`), null),
+          wrap(authedGet(`/api/analytics/moms-timeseries?${qs}&granularity=${g}`), { data: [] }),
+          wrap(authedGet(`/api/analytics/hospitals-ranking?${qs}`), { data: [] }),
+          wrap(authedGet(`/api/analytics/employees-report?${qs}`), { data: [] }),
+          wrap(authedGet(`/api/analytics/demographics?${qs}`), null),
+          wrap(authedGet(`/api/analytics/products-consumption?${qs}`), { data: [] }),
+          wrap(authedGet(`/api/analytics/open-shifts`), { data: [] }),
+          wrap(authedGet(`/api/analytics/conversion-timeseries?${qs}&granularity=${cg}`), { data: [] }),
+          wrap(authedGet(`/api/analytics/activity-heatmap?${qs}`), { data: [], max: 0 }),
+          wrap(authedGet(`/api/analytics/data-quality?${qs}`), null),
+        ]);
+
+      setData({
+        overview,
+        timeseries: timeseries?.data || [],
+        hospitals: hospitals?.data || [],
+        employees: employees?.data || [],
+        demographics,
+        products: products?.data || [],
+        productThresholds: (products as any)?.thresholds || null,
+        openShifts: openShifts?.data || [],
+        conversion: conversion?.data || [],
+        heatmap: { data: heatmap?.data || [], max: heatmap?.max || 0 },
+        dataQuality,
+      });
+      if (failed > 0) setError(`تعذّر تحميل ${failed} من المؤشرات`);
+      setLoading(false);
+    },
+    [authedGet],
   );
+
+  useEffect(() => {
+    if (range) loadAll(range);
+  }, [range, loadAll]);
+
+  const handleGranularity = useCallback(
+    async (g: Granularity) => {
+      setGranularity(g);
+      if (!range) return;
+      try {
+        const qs = `from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`;
+        const ts = await authedGet(`/api/analytics/moms-timeseries?${qs}&granularity=${g}`);
+        setData((d) => ({ ...d, timeseries: ts.data || [] }));
+      } catch {
+        /* keep previous series on failure */
+      }
+    },
+    [range, authedGet],
+  );
+
+  const handleConvGranularity = useCallback(
+    async (g: Granularity) => {
+      setConvGranularity(g);
+      if (!range) return;
+      try {
+        const qs = `from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`;
+        const conv = await authedGet(`/api/analytics/conversion-timeseries?${qs}&granularity=${g}`);
+        setData((d) => ({ ...d, conversion: conv.data || [] }));
+      } catch {
+        /* keep previous series on failure */
+      }
+    },
+    [range, authedGet],
+  );
+
+  const cur = data.overview?.current;
+  const prev = data.overview?.previous;
+  const demo = data.demographics;
 
   return (
     <div>
-      <div className='flex md:items-center flex-col md:flex-row justify-between mb-6 px-2 gap-4'>
-        <h1 className='font-bold text-2xl'>الصفحة الرئيسية للأدمن</h1>
-        <Select value={filter} onValueChange={(value) => setFilter(value)}>
-          <SelectTrigger className="w-[200px] border border-gray-300 rounded-lg p-2">
-            <SelectValue placeholder="اختر المدة الزمنية" />
-          </SelectTrigger>
-          <SelectContent>
-            {FILTERS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex md:items-center flex-col md:flex-row justify-between mb-6 px-2 gap-4">
+        <h1 className="font-bold text-2xl">الصفحة الرئيسية للأدمن</h1>
+        <DateRangeFilter defaultPreset="6months" onChange={setRange} />
       </div>
-      {/* STATS SECTION */}
-      <div className='flex items-start md:items-center justify-between flex-wrap flex-col md:flex-row'>
-        <StatCard
-          icon={<Users className='my-12' color='#5570F1' size={61} />}
-          label='إجمالي عدد الموظفين'
-          value={filteredData.employees.length}
+
+      {error && <div className="mb-4 rounded-lg bg-red-50 text-red-700 px-4 py-3 text-sm">{error}</div>}
+
+      {/* KPI ROW */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+        <KpiCard loading={loading} icon={<Users className="size-5" />} label="الموظفون" value={cur?.employees} prev={prev?.employees} />
+        <KpiCard loading={loading} icon={<UserCheck className="size-5" />} label="في الدوام" value={data.overview?.employeesOnShift} />
+        <KpiCard loading={loading} icon={<Hospital className="size-5" />} label="مستشفيات نشطة" value={cur?.activeHospitals} prev={prev?.activeHospitals} />
+        <KpiCard loading={loading} icon={<MapPinHouse className="size-5" />} label="الزيارات" value={cur?.visits} prev={prev?.visits} />
+        <KpiCard loading={loading} icon={<BookHeart className="size-5" />} label="الأمهات" value={cur?.moms} prev={prev?.moms} />
+        <KpiCard loading={loading} icon={<Baby className="size-5" />} label="المواليد" value={cur?.newborns} prev={prev?.newborns} />
+      </div>
+
+      {/* SECONDARY STATS */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        <MiniStat loading={loading} label="الوصول التراكمي (الكل)" value={data.overview?.reachAllTime} />
+        <MiniStat
+          loading={loading}
+          label="منتجات موزّعة"
+          value={cur?.productsDistributed}
+          delta={computeDelta(cur?.productsDistributed, prev?.productsDistributed)}
         />
-        <StatCard
-          icon={<UserCheck className='my-12' color='#5570F1' size={61} />}
-          label='في الدوام الآن'
-          value={filteredData.employees.filter((e) => e.isOnShift).length}
+        <MiniStat
+          loading={loading}
+          label="موافقات تواصل"
+          value={cur?.consent}
+          share={cur ? { pct: pct(cur.consent, cur.moms), of: "من الأمهات" } : null}
         />
-        <StatCard
-          icon={<Hospital className='my-12' color='#5570F1' size={61} />}
-          label='إجمالي عدد المستشفيات'
-          value={filteredData.hospitals.length}
-        />
-        <StatCard
-          icon={<MapPinHouse className='my-12' color='#5570F1' size={61} />}
-          label='إجمالي عدد الزيارات'
-          value={filteredData.visits.length}
-        />
-        <StatCard
-          icon={<BookHeart className='my-12' color='#5570F1' size={61} />}
-          label='إجمالي عدد الأمهات'
-          value={filteredData.moms.length}
+        <MiniStat loading={loading} label="نسبة التوقيع" value={cur ? `${pct(cur.withSignature, cur.moms)}%` : undefined} />
+        <MiniStat
+          loading={loading}
+          label="توائم فأكثر"
+          value={cur?.twinsPlus}
+          share={cur ? { pct: pct(cur.twinsPlus, cur.moms), of: "من الأمهات" } : null}
         />
       </div>
 
-      {availableProducts.length > 0 && (
-        <ProductSection
-          color='green'
-          title={`عدد المنتجات المتاحة (${availableProducts.length})`}
-          products={availableProducts}
-        />
-      )}
-      {lowStockProducts.length > 0 && (
-        <ProductSection
-          color='orange'
-          title={`منتجات على وشك النفاذ (${lowStockProducts.length})`}
-          products={lowStockProducts}
-        />
-      )}
-      {outOfStockProducts.length > 0 && (
-        <ProductSection
-          color='red'
-          title={`منتجات نفذت من المخزون (${outOfStockProducts.length})`}
-          products={outOfStockProducts}
-        />
-      )}
-      {productsWithoutQuestions .length > 0 && (
-        <ProductSection
-          color='blue'
-          title={`منتجات بدون اسئلة (${productsWithoutQuestions .length})`}
-          products={productsWithoutQuestions }
-        />
-      )}
+      {/* TREND (full width) */}
+      <ChartCard title="اتجاه تسجيل الأمهات">
+        {loading ? (
+          <ChartSkeleton />
+        ) : (
+          <MomsTrendChart data={data.timeseries} granularity={granularity} onGranularityChange={handleGranularity} />
+        )}
+      </ChartCard>
+
+      {/* 2-COLUMN GRID */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <ChartCard title="أعلى / أدنى المستشفيات">
+          {loading ? <ChartSkeleton /> : <HospitalsBarChart data={data.hospitals} />}
+        </ChartCard>
+        <ChartCard title="الجنسيات (سعودي / غير سعودي)">
+          {loading ? <ChartSkeleton /> : <NationalityPieChart data={demo?.nationality} />}
+        </ChartCard>
+
+        <ChartCard title="أداء الموظفين">
+          {loading ? <ChartSkeleton /> : <EmployeesBarChart data={data.employees} />}
+        </ChartCard>
+        <ChartCard title="التوائم والجنس">
+          {loading ? (
+            <ChartSkeleton />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <p className="text-center text-sm text-muted-foreground mb-1">الجنس</p>
+                <GenderDonut data={demo?.gender} />
+              </div>
+              <div>
+                <p className="text-center text-sm text-muted-foreground mb-1">تعدد المواليد</p>
+                <MultipleBirthsChart data={demo?.births} />
+              </div>
+            </div>
+          )}
+        </ChartCard>
+
+        <ChartCard title="استهلاك المنتجات">
+          {loading ? <ChartSkeleton /> : <ProductsConsumptionChart data={data.products} />}
+        </ChartCard>
+        <ChartCard title="⚠ يحتاج انتباه">
+          {loading ? <ChartSkeleton /> : (
+            <AttentionPanel
+              openShifts={data.openShifts}
+              products={data.products}
+              outOfStockThreshold={data.productThresholds?.outOfStock}
+              lowStockThreshold={data.productThresholds?.lowStock}
+            />
+          )}
+        </ChartCard>
+
+        <ChartCard title="تحوّل الحملة عبر الزمن">
+          {loading ? (
+            <ChartSkeleton />
+          ) : (
+            <SynchronizedAreaChart
+              data={data.conversion}
+              granularity={convGranularity}
+              onGranularityChange={handleConvGranularity}
+              series={[
+                { key: "moms", label: "الأمهات", color: CHART_COLORS.primary },
+                { key: "consent", label: "وافقوا على التواصل", color: CHART_COLORS.green },
+                { key: "signed", label: "موقّعة", color: CHART_COLORS.orange },
+                { key: "surveyed", label: "أكملوا الاستبيان", color: CHART_COLORS.teal },
+              ]}
+            />
+          )}
+        </ChartCard>
+        <ChartCard title="أوقات ذروة تسجيل الأمهات">
+          {loading ? (
+            <ChartSkeleton />
+          ) : (
+            <HeatmapMatrix
+              data={data.heatmap.data}
+              max={data.heatmap.max}
+              metricLabel="تسجيلات الأمهات"
+              valueNoun="أم"
+              from={range?.from}
+              to={range?.to}
+            />
+          )}
+        </ChartCard>
+
+        <div className="lg:col-span-2">
+          <ChartCard title="جودة البيانات">
+            {loading ? <ChartSkeleton /> : <DataQualityPanel stats={data.dataQuality} />}
+          </ChartCard>
+        </div>
+      </div>
     </div>
   );
 };
 
 export default AdminDashboardClient;
 
-// ⛳ Helper Components
-const StatCard = ({ icon, label, value }: any) => (
-  <div className='w-full md:w-1/5'>
-    <div className='m-2.5 px-5 flex items-center justify-start gap-8 bg-white rounded-xl'>
-      {icon}
-      <div>
-        <p>{label}</p>
-        <p className='font-bold text-2xl'>{value}</p>
-      </div>
-    </div>
+/* ---------- helpers ---------- */
+
+const KpiCard = ({
+  loading,
+  icon,
+  label,
+  value,
+  prev,
+}: {
+  loading: boolean;
+  icon: ReactNode;
+  label: string;
+  value?: number;
+  prev?: number;
+}) => {
+  const delta = prev !== undefined ? computeDelta(value, prev) : null;
+  return (
+    <Card className="py-4 gap-2">
+      <CardContent className="px-4">
+        <div className="flex items-center justify-between">
+          <div className="rounded-lg bg-[#5570F1]/10 p-2 text-[#5570F1]">{icon}</div>
+          <DeltaBadge delta={delta} />
+        </div>
+        <p className="text-sm text-gray-500 mt-3">{label}</p>
+        {loading ? <Skeleton className="h-7 w-16 mt-1" /> : <p className="font-bold text-2xl">{fmtNumber(value)}</p>}
+      </CardContent>
+    </Card>
+  );
+};
+
+const MiniStat = ({
+  loading,
+  label,
+  value,
+  share,
+  delta,
+}: {
+  loading: boolean;
+  label: string;
+  value?: number | string;
+  /** Contextual share of a natural whole, e.g. `{ pct: 12, of: "من الأمهات" }`. */
+  share?: { pct: number; of: string } | null;
+  /** Period-over-period change vs. the previous window. */
+  delta?: Delta | null;
+}) => (
+  <div className="bg-white rounded-xl border px-4 py-3">
+    <p className="text-xs text-gray-500">{label}</p>
+    {loading ? (
+      <Skeleton className="h-6 w-12 mt-1" />
+    ) : (
+      <>
+        <div className="flex items-baseline gap-2">
+          <p className="font-bold text-xl">{typeof value === "number" ? fmtNumber(value) : value ?? "—"}</p>
+          <DeltaBadge delta={delta} />
+        </div>
+        {share && (
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            {share.pct}% {share.of}
+          </p>
+        )}
+      </>
+    )}
   </div>
 );
 
-const ProductSection = ({ color, title, products }: any) => (
-  <div className='mt-10'>
-    <div className='flex items-center gap-2'>
-      <p className={`bg-${color}-500 w-4 h-4 rounded-full mx-2.5`}></p>
-      <h1 className='text-2xl'>{title}</h1>
-    </div>
-    <div className='flex items-start md:items-center justify-between flex-col md:flex-row flex-wrap'>
-      {products.map((product: any) => (
-        <Link href={`/products/${product._id}`} className='w-full md:w-1/3' key={product._id}>
-          <div className='m-2 p-4 rounded-lg bg-white'>
-            <div className='flex items-center justify-between gap-4'>
-              {product.name}
-              <p className={`bg-${color}-500 rounded-full px-6 py-1 text-white`}>متاح</p>
-            </div>
-            <div className='flex items-center justify-between gap-4 mt-10 text-[#73808C]'>
-              الكمية المتوفرة <p className='text-black'>{product.totalQuantity}</p>
-            </div>
-          </div>
-        </Link>
-      ))}
-    </div>
-  </div>
+const ChartCard = ({ title, children }: { title: string; children: ReactNode }) => (
+  <Card>
+    <CardHeader className="pb-0">
+      <CardTitle className="text-base">{title}</CardTitle>
+    </CardHeader>
+    <CardContent>{children}</CardContent>
+  </Card>
 );
+
+const ChartSkeleton = () => <Skeleton className="w-full h-[300px]" />;

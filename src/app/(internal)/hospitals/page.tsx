@@ -1,29 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react'
-import { ClientDataTable } from './client-data-table'
 import { cookies, headers } from 'next/headers';
-import { columns } from "./columns";
 import AddNewHospitalDialog from '@/components/AddNewHospitalDialog';
+import HospitalsTable, { type HospitalRow } from '@/components/HospitalsTable';
+import { userRoles } from '@/models/enum.constants';
 
-
-type ProcessedHospitals = {
-  id: string;
-  name: string;
-  city: string;
-  district: string;
-  employeeEmail: string;
-  employeeName: string;
-};
+const rawCoord = (loc: any) =>
+  loc && Number.isFinite(loc?.lat) && Number.isFinite(loc?.lng) ? { lat: loc.lat, lng: loc.lng } : null;
+const coordText = (loc: any) =>
+  loc && Number.isFinite(loc?.lat) && Number.isFinite(loc?.lng) ? `${loc.lat}, ${loc.lng}` : '';
 
 const HospitalsPage = async () => {
   const cookieStore = await cookies();
   const userToken = cookieStore.get('access_token')?.value;
+  const isAdmin = cookieStore.get('role')?.value === userRoles.ADMIN;
 
   const headersList = await headers();
   const host = headersList.get('host');
 
-    const processedHospitals: ProcessedHospitals[] = [];
-    const data = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/hospitals/get-hospitals`, {
+  const processedHospitals: HospitalRow[] = [];
+  const data = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/hospitals/get-hospitals`, {
     method: 'GET',
     headers: {
       authorization: `Bearer ${userToken}`,
@@ -34,24 +29,26 @@ const HospitalsPage = async () => {
 
   if (data.status === 200) {
     hospitals.hospitals.map((hospital: any) => {
+      const assigned = (hospital.assignedEmployees || []).map((e: any) => `${e.firstName} ${e.lastName}`.trim());
       processedHospitals.push({
         id: hospital._id,
         name: hospital.name,
         city: hospital.city,
         district: hospital.district,
-        employeeEmail: hospital.createdBy.email,
-        employeeName: `${hospital.createdBy.firstName} ${hospital.createdBy.lastName}`,
+        assignedEmployeesText: assigned.length ? assigned.join('، ') : '—',
+        location: rawCoord(hospital.location),
+        locationText: coordText(hospital.location),
       });
     });
   }
 
   return (
     <div>
-      <div className='flex items-center justify-between p-4 rounded-3xl mb-10'>
+      <div className='flex items-center justify-between mb-6'>
         <h1 className='text-3xl font-bold p-4'>المستشفيات</h1>
-        <AddNewHospitalDialog userToken={userToken} />
+        <AddNewHospitalDialog userToken={userToken} isAdmin={isAdmin} />
       </div>
-      <ClientDataTable columns={columns} data={processedHospitals} />
+      <HospitalsTable data={processedHospitals} />
     </div>
   )
 }

@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { cookies, headers } from 'next/headers';
 import { columns } from "./columns";
-import { ClientDataTable } from './client-data-table';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import FilterableTable from '@/components/FilterableTable';
+import { userRoles } from '@/models/enum.constants';
 
 type Employee = {
   id: string;
@@ -12,7 +13,7 @@ type Employee = {
   email: string;
   phoneNumber: string;
   role: string;
-  isOnShift: boolean;
+  onShiftLabel: string;
   visitCount: number;
 }
 
@@ -21,7 +22,7 @@ const UsersPage = async () => {
   const userToken = cookieStore.get('access_token')?.value;
   const headersList = await headers();
   const host = headersList.get('host');
-  
+
   async function getEmployeessData(userToken: any) {
     const res = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/user/get-all`, {
       cache: 'no-store',
@@ -44,7 +45,7 @@ const UsersPage = async () => {
         email: employee.email,
         phoneNumber: employee.phoneNumber,
         role: employee.role,
-        isOnShift: employee.isOnShift,
+        onShiftLabel: employee.isOnShift ? 'نعم' : 'لا',
         visitCount: employee.visits.filter((visit: { isActive: boolean; }) => visit.isActive === true).length,
       });
     });
@@ -52,13 +53,48 @@ const UsersPage = async () => {
 
   return (
     <div>
-      <div className='flex items-center justify-between p-4 rounded-3xl mb-10'>
+      <div className='flex items-center justify-between mb-6'>
         <h1 className='text-3xl font-bold p-4'>الموظفين</h1>
         <Button>
           <Link href="/employees/create">إضافة موظف جديد</Link>
         </Button>
       </div>
-      <ClientDataTable columns={columns} data={processedEmployees} />
+      <FilterableTable
+        data={processedEmployees}
+        columns={columns}
+        basePath="/employees"
+        filename="employees.csv"
+        searchKeys={['firstName', 'lastName', 'email']}
+        searchPlaceholder="ابحث بالاسم أو البريد"
+        filters={[
+          {
+            key: 'onShiftLabel',
+            label: 'حالة الدوام',
+            options: [
+              { label: 'في الدوام الآن', value: 'نعم' },
+              { label: 'خارج الدوام', value: 'لا' },
+            ],
+          },
+          {
+            key: 'role',
+            label: 'الدور الوظيفي',
+            options: [
+              { label: 'مدير', value: userRoles.ADMIN },
+              { label: 'موظف', value: userRoles.EMPLOYEE },
+              { label: 'مخزن', value: userRoles.WAREHOUSE },
+            ],
+          },
+        ]}
+        exportColumns={[
+          { key: 'firstName', header: 'الاسم الأول' },
+          { key: 'lastName', header: 'الاسم الأخير' },
+          { key: 'email', header: 'البريد الإلكتروني' },
+          { key: 'phoneNumber', header: 'رقم الهاتف' },
+          { key: 'role', header: 'الدور' },
+          { key: 'onShiftLabel', header: 'في الدوام' },
+          { key: 'visitCount', header: 'عدد الزيارات' },
+        ]}
+      />
     </div>
   )
 }

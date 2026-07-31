@@ -1,18 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { cookies, headers } from 'next/headers';
 import { columns } from "./columns";
-import { ClientDataTable } from './client-data-table';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import FilterableTable from '@/components/FilterableTable';
+import { stockStatus } from '@/utils/stock/thresholds';
 
 type Product = {
   id: string;
   name: string;
-  // imageUrl: string; TODO IMPLEMENT IMAGE UPLOAD
-  size: string;
   totalQuantity: number;
-  warehouseQuantity: number;
   hospitalsQuantity: number;
+  stockLabel: string;
 }
 
 const ProductsPage = async () => {
@@ -20,7 +17,7 @@ const ProductsPage = async () => {
   const userToken = cookieStore.get('access_token')?.value;
   const headersList = await headers();
   const host = headersList.get('host');
-  
+
   async function getProductsData(userToken: any) {
     const res = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/product/get-all`, {
       cache: 'no-store',
@@ -32,32 +29,51 @@ const ProductsPage = async () => {
     return res.json();
     }
   const products = await getProductsData(userToken);
+  const thresholds = products.thresholds; // admin-configured; falls back to defaults
 
   const processedProducts: Product[] = [];
   if (products.products.length > 0) {
     products.products.map((product: any) => {
+      const total = product.totalQuantity ?? 0;
       processedProducts.push({
         id: product._id,
         name: product.name,
-        // imageUrl: product.imageUrl,
-        size: product.size,
         totalQuantity: product.totalQuantity,
-        warehouseQuantity: product.warehouseQuantity,
         hospitalsQuantity: product.hospitalsQuantity,
+        stockLabel: stockStatus(total, thresholds?.outOfStock, thresholds?.lowStock),
       });
-    })/*.sort((a: Product, b: Product) => a.totalQuantity - b.totalQuantity);*/
+    });
   }
 
   return (
     <div>
-      <div className='flex items-center justify-between p-4 rounded-3xl mb-10'>
-        <h1 className='text-3xl font-bold p-4 mb-10'>المنتجات</h1>
-        <Button>
-          <Link href="/products/create">إضافة منتج جديد</Link>
-        </Button>
+      <div className='flex items-center justify-between mb-6'>
+        <h1 className='text-3xl font-bold p-4'>الصناديق</h1>
       </div>
-
-      <ClientDataTable columns={columns} data={processedProducts} />
+      <FilterableTable
+        data={processedProducts}
+        columns={columns}
+        basePath="/products"
+        filename="boxes.csv"
+        searchKeys={['name']}
+        searchPlaceholder="ابحث باسم الصندوق"
+        filters={[
+          {
+            key: 'stockLabel',
+            label: 'حالة المخزون',
+            options: [
+              { label: 'متاح', value: 'متاح' },
+              { label: 'منخفض', value: 'منخفض' },
+              { label: 'نفذ', value: 'نفذ' },
+            ],
+          },
+        ]}
+        exportColumns={[
+          { key: 'name', header: 'اسم الصندوق' },
+          { key: 'totalQuantity', header: 'إجمالي المخزون' },
+          { key: 'stockLabel', header: 'حالة المخزون' },
+        ]}
+      />
     </div>
   );
 };
