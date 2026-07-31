@@ -2,6 +2,7 @@ import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { Product } from "@/models/Product";
+import { getSettings } from "@/utils/settings/getSettings";
 
 export async function GET(req: NextRequest) {
   await initDb();
@@ -28,5 +29,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({status: 404, message: "No products found"})
   }
 
-  return NextResponse.json({ message: "Products fetched successfully", products }, { status: 200 });
+  // Admin-configured stock-status thresholds, so the list badge stays in sync.
+  const { outOfStockThreshold, lowStockThreshold } = await getSettings();
+
+  return NextResponse.json(
+    { message: "Products fetched successfully", products, thresholds: { outOfStock: outOfStockThreshold, lowStock: lowStockThreshold } },
+    { status: 200 },
+  );
 }
