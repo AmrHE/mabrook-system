@@ -85,6 +85,19 @@ const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) =>
           </div>
         </div>
 
+        <h4 className='mt-12 mb-4 font-semibold text-gray-700 text-xl'>التطبيقات المثبّتة</h4>
+        {Array.isArray(mom?.mom?.installedApp) && mom.mom.installedApp.length > 0 ? (
+          <div className='flex flex-wrap gap-2'>
+            {mom.mom.installedApp.map((app: string) => (
+              <span key={app} className='rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700'>
+                {app}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className='text-gray-400'>لا يوجد</p>
+        )}
+
         <h4 className='mt-12 mb-4 font-semibold text-gray-700 text-xl'>بيانات الأطفال</h4>
         <div className='flex max-w-[350px] justify-between'>
           <div className='flex flex-col gap-5'>
