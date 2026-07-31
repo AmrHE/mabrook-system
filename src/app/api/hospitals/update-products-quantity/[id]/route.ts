@@ -5,7 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { userRoles } from "@/models/enum.constants";
 import { Hospital } from "@/models/Hospital";
-import { Product } from "@/models/Product";
+import { User } from "@/models/User";
+import { recomputeProductStock } from "@/utils/stock/recompute";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
   const { id } = await params;
@@ -14,7 +15,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   await initDb();
 
-  /***************ADMIN GAURD START****************/
+  /***************AUTH GAURD START****************/
   const authHeader = req.headers.get('authorization');
   const userToken = authHeader?.split(" ")[1];
   if (!userToken) {
@@ -23,16 +24,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string };
 
-  if (userPayload.role === userRoles.EMPLOYEE) {
-    return NextResponse.json({ status: 403, message: "This Action is not allowed for you" }, { status: 403 });
-  }
-  /***************ADMIN GAURD END****************/
-
   if (!userPayload) {
     return NextResponse.json({ status: 400, message: "Cannot identify the user Please re-login and try again" }, { status: 400 });
   }
 
-  if (hospitalQuantities.length === 0) {
+  // Admins and warehouse users can edit any hospital's stock. Employees can edit
+  // only the hospitals they are assigned to.
+  if (userPayload.role === userRoles.EMPLOYEE) {
+    const user = await User.findById(userPayload._id).select("assignedHospitals");
+    const assigned = (user?.assignedHospitals || []).map((h: any) => h.toString());
+    if (!assigned.includes(id)) {
+      return NextResponse.json({ status: 403, message: "This Action is not allowed for you" }, { status: 403 });
+    }
+  }
+  /***************AUTH GAURD END****************/
+
+  if (!Array.isArray(hospitalQuantities) || hospitalQuantities.length === 0) {
     return NextResponse.json({ status: 400, message: "hospitalQuantities must be a non-empty array" }, { status: 400 });
   }
 
@@ -41,94 +48,47 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   try {
     await session.withTransaction(async () => {
-      // Load hospital once in session
       const hospital = await Hospital.findById(id).session(session);
       if (!hospital) throw new Error("Hospital not found");
 
-      // Map to accumulate delta per productId (string -> number)
-      const deltas = new Map<string, number>();
+      const affectedProducts = new Set<string>();
 
-      // Apply requested changes in-memory and compute deltas
+      // Apply requested absolute quantities in-memory. Warehouse is paused, so we
+      // no longer move stock in/out of a central pool — the hospital number is the
+      // source of truth and the box totals are recomputed from it below.
       for (const { productId, quantity } of hospitalQuantities) {
         const pidStr = productId.toString();
         const newQty = Number(quantity) || 0;
 
-        const existingStock: { product: mongoose.Types.ObjectId; quantity: number; lastRestockedAt?: Date } | undefined = hospital.productStocks.find(
-          (ps: { product: mongoose.Types.ObjectId; quantity: number; lastRestockedAt?: Date }) => ps.product.toString() === pidStr
-        );
+        const existingStock: { product: mongoose.Types.ObjectId; quantity: number; lastRestockedAt?: Date } | undefined =
+          hospital.productStocks.find(
+            (ps: { product: mongoose.Types.ObjectId; quantity: number; lastRestockedAt?: Date }) => ps.product.toString() === pidStr
+          );
         const prevQty = existingStock ? (existingStock.quantity || 0) : 0;
-        const delta = newQty - prevQty; // positive => hospital gained items, negative => consumption
+        const delta = newQty - prevQty;
 
-        // Update or insert the stock entry in-memory
         if (existingStock) {
           existingStock.quantity = newQty;
-          // update lastRestockedAt only when we actually restock (delta > 0)
+          // Stamp lastRestockedAt only when quantity actually increased.
           if (delta > 0) existingStock.lastRestockedAt = new Date();
         } else {
           hospital.productStocks.push({
             product: new mongoose.Types.ObjectId(pidStr),
             quantity: newQty,
-            // if newQty > 0 treat as restock
-            lastRestockedAt: newQty > 0 ? new Date() : undefined
+            lastRestockedAt: newQty > 0 ? new Date() : undefined,
           } as any);
         }
 
-        deltas.set(pidStr, (deltas.get(pidStr) || 0) + delta);
+        if (delta !== 0) affectedProducts.add(pidStr);
       }
 
-      // Persist hospital change once (no hooks needed)
       await hospital.save({ session });
 
-      // For each affected product apply warehouse logic only for positive deltas,
-      // then recalc hospitalsQuantity and update totalQuantity.
-      for (const [pidStr, delta] of deltas.entries()) {
-        const productIdObj = new mongoose.Types.ObjectId(pidStr);
-
-        // Load product inside session
-        const productDoc = await Product.findById(productIdObj).session(session);
-        if (!productDoc) throw new Error(`Product ${pidStr} not found`);
-
-        let updatedProductDoc = productDoc;
-
-        // Only adjust warehouse when hospital gained items (delta > 0).
-        // Negative delta => consumption => DO NOT change warehouse.
-        if (delta > 0) {
-          if ((productDoc.warehouseQuantity || 0) < delta) {
-            throw new Error(`Insufficient warehouse stock for product ${pidStr}`);
-          }
-
-          updatedProductDoc = await Product.findByIdAndUpdate(
-            productIdObj,
-            { $inc: { warehouseQuantity: -delta } },
-            { new: true, session }
-          );
-
-          if (!updatedProductDoc) throw new Error(`Failed to update warehouse for product ${pidStr}`);
-        }
-
-        // Recalculate hospitalsQuantity using aggregation
-        const agg = await Hospital.aggregate([
-          { $unwind: "$productStocks" },
-          { $match: { "productStocks.product": productIdObj } },
-          { $group: { _id: null, total: { $sum: "$productStocks.quantity" } } }
-        ]).session(session);
-
-        const totalHospitalsQuantity = agg[0]?.total || 0;
-        const currentWarehouseQty = (updatedProductDoc?.warehouseQuantity ?? productDoc.warehouseQuantity) || 0;
-
-        // Update product's hospitalsQuantity and totalQuantity
-        await Product.findByIdAndUpdate(
-          productIdObj,
-          {
-            $set: {
-              hospitalsQuantity: totalHospitalsQuantity,
-              totalQuantity: totalHospitalsQuantity + currentWarehouseQty
-            }
-          },
-          { session }
-        );
+      // Recompute each affected box's denormalized totals from all hospitals.
+      for (const pidStr of affectedProducts) {
+        await recomputeProductStock(pidStr, session);
       }
-    }); // end transaction
+    });
   } catch (err: any) {
     transactionError = err;
   } finally {

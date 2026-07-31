@@ -23,22 +23,22 @@ export async function POST(req: NextRequest) {
   }
   /***************ADMIN GAURD END****************/
 
-  const { name, description, imageUrl, warehouseQuantity, size } = await req.json();
+  const { name } = await req.json();
 
-  if (!name || !description || !imageUrl || !warehouseQuantity) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  // Boxes are created by name only (from the Settings page). Stock is filled in
+  // per hospital afterwards; the warehouse counter is paused (kept at 0).
+  if (!name) {
+    return NextResponse.json({ error: "Missing fields", message: "الرجاء إدخال اسم الصندوق" }, { status: 400 });
   }
 
   try {
     const newProduct = await Product.create({
       name,
-      description,
-      imageUrl,//TODO: ADD IMAGE UPLOAD FUNCTIONALITY
-      totalQuantity: warehouseQuantity,
-      warehouseQuantity,
+      totalQuantity: 0,
+      warehouseQuantity: 0, // dormant — kept for a possible future re-enable
       hospitalsQuantity: 0,
-      size: size || "N/A",
       isActive: true,
+      createdBy: userPayload._id,
     });
 
     if (!newProduct) {

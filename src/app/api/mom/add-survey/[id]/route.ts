@@ -31,7 +31,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({status: 404, message: "No mom found"})
   }
 
-  if (survey) mom.survey = survey;
+  // The box is locked at mom creation (it drives the stock decrement). Here we
+  // only update the survey answers for the already-assigned box; we never change
+  // which box was given, so stock never desyncs.
+  if (Array.isArray(survey)) {
+    for (const incoming of survey) {
+      const existing = mom.survey?.find(
+        (s: { product?: unknown }) => String(s.product) === String(incoming.product),
+      );
+      if (existing) existing.QA = incoming.QA;
+    }
+    mom.markModified("survey");
+  }
 
   mom.updatedAt = new Date();
   await mom.save();

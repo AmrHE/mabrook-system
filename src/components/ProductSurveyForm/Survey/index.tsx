@@ -5,93 +5,102 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-export default function SurveyForm({ products, id, userToken } : {products: any, id: string, userToken: string | undefined}) {
-  const [isLoading, setIsLoading] = useState(false)
+type SurveyEntry = {
+  product: { _id?: string; name?: string } | string;
+  QA: { question: string; answer: string }[];
+};
+
+/**
+ * Answers the survey questions for the single box given to this mom. The box
+ * itself is locked at mom creation (it drove the stock decrement); here we only
+ * edit the answers, so add-survey never re-touches stock.
+ */
+export default function SurveyForm({ survey: initialSurvey, id, userToken }: { survey: SurveyEntry[]; id: string; userToken: string | undefined }) {
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  
-  // Prepare initial state based on products
-  const [survey, setSurvey] = useState(
-    products
-      .filter((p:any) => p.questions && p.questions.length > 0)
-      .map((product:any) => ({
-        product: product._id,
-        QA: product.questions.map((q:any) => {
-          // Try to find existing answer if product has `QA` field
-          const existingAnswer = product.QA?.find((qa:any) => qa.question === q)?.answer || "";
-          return { question: q, answer: existingAnswer };
-        }),
-      }))
+
+  const [survey, setSurvey] = useState<SurveyEntry[]>(
+    (initialSurvey || []).map((entry) => ({
+      product: entry.product,
+      QA: (entry.QA || []).map((qa) => ({ question: qa.question, answer: qa.answer || "" })),
+    }))
   );
 
-  // Handle answer change
-  const handleAnswerChange = (productId: string, questionIndex: number, value: any) => {
-    setSurvey((prev:any) =>
-      prev.map((item:any) =>
-        item.product === productId
-          ? {
-              ...item,
-              QA: item.QA.map((qa:any, idx:any) =>
-                idx === questionIndex ? { ...qa, answer: value } : qa
-              ),
-            }
+  const productId = (p: SurveyEntry["product"]) => (typeof p === "string" ? p : p?._id || "");
+  const productName = (p: SurveyEntry["product"]) => (typeof p === "string" ? "" : p?.name || "");
+
+  const handleAnswerChange = (pid: string, questionIndex: number, value: string) => {
+    setSurvey((prev) =>
+      prev.map((item) =>
+        productId(item.product) === pid
+          ? { ...item, QA: item.QA.map((qa, idx) => (idx === questionIndex ? { ...qa, answer: value } : qa)) }
           : item
       )
     );
   };
 
-  const handleSubmit = async (/*e:any*/) => {
-    setIsLoading(true)
-    // e.preventDefault();
-    const res = await fetch(`/api/mom/add-survey/${id}`, {
-      method: "PATCH",
-      headers: { 
-        "Content-Type": "application/json",
-        authorization: `Bearer ${userToken}`,
-      },
-      body: JSON.stringify({ survey }),
-    });
-
-    const data = await res.json();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    // Send product as its id — the API matches on it and updates QA only.
+    const payload = survey.map((entry) => ({ product: productId(entry.product), QA: entry.QA }));
+    try {
+      const res = await fetch(`/api/mom/add-survey/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({ survey: payload }),
+      });
       if (!res.ok) {
-        toast.error('حدث خطأ ما أثناء إضافة الأسئلة. الرجاء المحاولة مرة أخرى.');
-        setIsLoading(false)
+        toast.error("حدث خطأ ما أثناء حفظ الإجابات. الرجاء المحاولة مرة أخرى.");
+        setIsLoading(false);
+        return;
       }
-      toast.success('تمت إضافة الأسئلة بنجاح!');
+      toast.success("تم حفظ الإجابات بنجاح!");
       router.push(`/moms/${id}`);
-      console.log("Questions added successfully:", data);
+      router.refresh();
+    } catch {
+      toast.error("حدث خطأ ما أثناء حفظ الإجابات. الرجاء المحاولة مرة أخرى.");
+      setIsLoading(false);
+    }
   };
-  
+
+  if (!survey.length) {
+    return <p className="text-gray-400 mt-6">لا يوجد صندوق مسجّل لهذه الأم.</p>;
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 w-1/3">
-      {survey.map((productData:any, pIndex:any) => {
-        const product = products.find((p:any) => p._id === productData.product);
-        return (
-          <div key={pIndex} className="p-4 border-b rounded">
-            <h2 className="font-bold mb-4">{product.name}</h2>
-            {productData.QA.map((qa:any, qIndex:any) => (
+    <form onSubmit={handleSubmit} className="space-y-8 lg:w-1/3 mt-6">
+      {survey.map((entry, pIndex) => (
+        <div key={pIndex} className="p-4 border rounded-lg">
+          <h2 className="font-bold mb-4">الصندوق: {productName(entry.product) || "—"}</h2>
+          {entry.QA.length === 0 ? (
+            <p className="text-gray-400 text-sm">لا توجد أسئلة لهذا الصندوق.</p>
+          ) : (
+            entry.QA.map((qa, qIndex) => (
               <div key={qIndex} className="mb-4">
                 <label className="block font-medium mb-1">{qa.question}</label>
                 <input
                   type="text"
                   value={qa.answer}
-                  onChange={(e) =>
-                    handleAnswerChange(productData.product, qIndex, e.target.value)
-                  }
+                  onChange={(e) => handleAnswerChange(productId(entry.product), qIndex, e.target.value)}
                   className="w-full border rounded p-2"
-                  placeholder="Your answer"
+                  placeholder="الإجابة"
                 />
               </div>
-            ))}
-          </div>
-        );
-      })}
+            ))
+          )}
+        </div>
+      ))}
 
       <Button
         type="submit"
         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         disabled={isLoading}
       >
-        {isLoading ? 'جاري الحفظ...' : ' احفظ التعديلات'}
+        {isLoading ? "جاري الحفظ..." : "احفظ الإجابات"}
       </Button>
     </form>
   );

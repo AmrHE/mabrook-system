@@ -27,6 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .findById(id)
   .populate({path: 'visitId', populate: { path: 'hospitalId', model: 'Hospital'}})
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
+  .populate({path: 'survey.product', model: 'Product', select: 'name questions'})
 
   if(userPayload.role !== userRoles.ADMIN && userPayload._id !== mom?.createdBy._id.toString()) {
     return NextResponse.json({status: 403, message: "You are not authorized to view this mom"}, { status: 403 });

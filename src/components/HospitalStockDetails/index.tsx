@@ -13,7 +13,7 @@ interface ProductStock {
   product: {
     _id: string;
     name: string;
-    size: string;
+    size?: string;
   };
   quantity: number;
   lastRestockedAt: string | null;
@@ -64,13 +64,15 @@ const HospitalStockDetails = ({
       if (!res.ok) {
         toast.error('حدث خطأ ما أثناء تعديل الكميات. الرجاء المحاولة مرة أخرى.');
         setIsLoading(false)
+        return;
       }
       toast.success('تمت تعديل الكميات بنجاح!');
       router.push(`/hospitals/${hospitalId}`);
+      router.refresh();
     } catch (error: any) {
       toast.error('حدث خطأ ما أثناء تعديل الكميات. الرجاء المحاولة مرة أخرى.');
-      toast.error("Error updating:", error.message);
-      console.error("Error updating:", error.message);
+      console.error("Error updating:", error?.message);
+      setIsLoading(false);
     }
   };
 
@@ -84,7 +86,7 @@ const HospitalStockDetails = ({
       {stocks.map((stock) => (
         <div key={stock._id} className="flex flex-col gap-2">
           <Label htmlFor={`product-${stock._id}`}>
-            {stock.product.name} ({stock.product.size})
+            {stock.product.name}
           </Label>
           <Input
             type="number"

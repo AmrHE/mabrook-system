@@ -1,8 +1,10 @@
+import mongoose from "mongoose";
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { userRoles } from "@/models/enum.constants";
 import { Product } from "@/models/Product";
+import { Hospital } from "@/models/Hospital";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
 
@@ -35,5 +37,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({status: 404, message: "No product found with the provided ID"})
   }
 
-  return NextResponse.json({ message: "Product fetched successfully", product }, { status: 200 });
+  // Per-hospital breakdown: where this box's stock currently sits. Powers the
+  // stock table on the box detail page (/products/[id]).
+  const perHospital = await Hospital.aggregate([
+    { $match: { isActive: true } },
+    { $unwind: "$productStocks" },
+    { $match: { "productStocks.product": new mongoose.Types.ObjectId(id) } },
+    {
+      $project: {
+        _id: 0,
+        hospitalId: "$_id",
+        hospitalName: { $ifNull: ["$name", "غير محدد"] },
+        city: { $ifNull: ["$city", ""] },
+        quantity: { $ifNull: ["$productStocks.quantity", 0] },
+        lastRestockedAt: "$productStocks.lastRestockedAt",
+      },
+    },
+    { $sort: { quantity: -1 } },
+  ]);
+
+  return NextResponse.json({ message: "Product fetched successfully", product, perHospital }, { status: 200 });
 }

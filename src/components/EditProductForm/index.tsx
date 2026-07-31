@@ -11,37 +11,16 @@ import { toast } from 'sonner';
 const EditProductForm = ({userToken, product}: {userToken: string | undefined, product: any}) => {
   const params = useParams();
   const productId = params.id as string;
-  
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  // const [image, setImage] = useState<File | null>(null)
-  const [size, setSize] = useState("");
-  const [isLoading, setIsLoading] = useState(false)
 
-  const [warehouseQuantity, setWarehouseQuantity] = useState<number>(0);
-  const [responseMessage, setResponseMessage] = useState('');
-  const [updatedProduct, setUpdatedProduct] = useState<any>(null);
+  const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter();
-  
 
   useEffect(() => {
     if(product) {
       setName(product.name);
-      setDescription(product.description);
-      setSize(product.size);
-      setWarehouseQuantity(product.warehouseQuantity);
     }
   }, [product])
-
-  useEffect(() => {
-    if(updatedProduct) {
-      console.log("Updated Product:", updatedProduct);
-      setName(updatedProduct.name);
-      setDescription(updatedProduct.description);
-      setSize(updatedProduct.size);
-      setWarehouseQuantity(updatedProduct.warehouseQuantity);
-    }
-  }, [updatedProduct])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     setIsLoading(true)
@@ -53,79 +32,36 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
           'Content-Type': 'application/json',
           authorization: `Bearer ${userToken}`,
         },
-        body: JSON.stringify({
-          name,
-          description,
-          size,
-          warehouseQuantity,
-        }),
+        body: JSON.stringify({ name }),
       });
 
-      const data = await res.json();
-      setUpdatedProduct(data.product);
-
       if (!res.ok) {
-        toast.error('حدث خطأ ما أثناء تعديل المنتج. الرجاء المحاولة مرة أخرى.');
+        toast.error('حدث خطأ ما أثناء تعديل الصندوق. الرجاء المحاولة مرة أخرى.');
         setIsLoading(false)
+        return;
       }
-      toast.success('تمت تعديل المنتج بنجاح!');
-      setResponseMessage('Mom submitted successfully!');
+      toast.success('تم تعديل الصندوق بنجاح!');
       router.push(`/products/${productId}`);
-
+      router.refresh();
     } catch (error: any) {
-      toast.error('حدث خطأ ما أثناء تعديل المنتج. الرجاء المحاولة مرة أخرى.');
-      toast.error(`Error: ${error.message}`);
-      setResponseMessage(`Error: ${error.message}`);
+      toast.error('حدث خطأ ما أثناء تعديل الصندوق. الرجاء المحاولة مرة أخرى.');
+      setIsLoading(false)
     }
   };
 
   return (
     <form className='flex flex-col gap-5 lg:max-w-1/3 mt-10' onSubmit={handleSubmit}>
       <Label htmlFor="name">
-        اسم المنتج
+        اسم الصندوق
       </Label>
       <Input
-        placeholder="اسم المنتج"
+        placeholder="اسم الصندوق"
         id="name"
         required
         value={name}
-        onChange={(e) => setName(e.target.value)} 
+        onChange={(e) => setName(e.target.value)}
       />
-      
-      <Label htmlFor="description">
-        وصف المنتج
-      </Label>
-      <Input
-        placeholder="وصف المنتج"
-        id="description"
-        required
-        value={description}
-        onChange={(e) => setDescription(e.target.value)} 
-      />
-      
-      <Label htmlFor="size">
-        حجم المنتج
-      </Label>
-      <Input
-        placeholder="حجم المنتج"
-        id="size"
-        required
-        value={size}
-        onChange={(e) => setSize(e.target.value)} 
-      />
-      
-      <Label htmlFor="warehouseQuantity">
-        الكمية المتاحة في المستودع
-      </Label>
-      <Input
-        type='number'
-        placeholder="الكمية المتاحة في المستودع"
-        id="warehouseQuantity"
-        required
-        value={warehouseQuantity}
-        onChange={(e) => setWarehouseQuantity(Number(e.target.value))} 
-      />
-      
+
       <div className='flex items-center justify-center w-full mt-4'>
         <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>
           { isLoading ? 'جاري الحفظ...' : 'احفظ التعديلات' }
