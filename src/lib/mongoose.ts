@@ -13,6 +13,12 @@ import '@/models/Hospital'
 import '@/models/Shift'
 import '@/models/Mom'
 import '@/models/Product'
+import '@/models/Settings'
+import '@/models/LeaveRequest'
+import '@/models/LocationAddition'
+import '@/models/NationalityAddition'
+import '@/models/ProjectAddition'
+import '@/models/AppAddition'
 
 const MONGODB_URI = process.env.MONGO_URI
 

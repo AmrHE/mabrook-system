@@ -16,6 +16,8 @@ import { ClientDataTable } from './client-data-table';
 import { columns } from './columns';
 import EndVisitButton from '@/components/EndVisitButton';
 import DeleteVisitButton from '@/components/DeleteVisitButton';
+import LocationModal from '@/components/LocationModal';
+import FenceBadge from '@/components/FenceBadge';
 
 
 type Mom = {
@@ -141,19 +143,24 @@ async function getMomsData(visitId: string, userToken: any) {
             <p>اسم المستشفى</p>
             <p>المدينة</p>
             <p>الحي</p>
-            { visit.visit.location && <p>الموقع الجغرافي</p>}
+            <p>حالة الموقع</p>
+            { (visit.visit.startLocation || visit.visit.endLocation) && <p>الموقع الجغرافي</p>}
           </div>
           <div className='flex flex-col gap-5'>
             <p>{visit.visit.hospitalId.name}</p>
             <p>{visit.visit.hospitalId.city}</p>
             <p>{visit.visit.hospitalId.district}</p>
-            { visit.visit.location && (
-              <a
-              className='text-blue-500 hover:underline'
-              target="_blank"
-              rel="noopener noreferrer"
-              href={`https://www.google.com/maps/?q=${visit?.visit?.location?.lat},${visit?.visit?.location?.lng}`}
-              >Open In Google Maps</a>
+            <p><FenceBadge status={visit.visit.startFenceStatus} distanceMeters={visit.visit.startDistanceMeters} /></p>
+            { (visit.visit.startLocation || visit.visit.endLocation) && (
+              <LocationModal
+                start={visit.visit.startLocation}
+                end={visit.visit.endLocation}
+                hospital={visit.visit.hospitalId?.location}
+                startLabel="بداية الزيارة"
+                endLabel="نهاية الزيارة"
+                title="موقع الزيارة"
+                triggerText="عرض على الخريطة"
+              />
             )}
           </div>
         </div>
@@ -170,7 +177,7 @@ async function getMomsData(visitId: string, userToken: any) {
         <ClientDataTable columns={columns} data={processedMoms} />
       </TabsContent>
       <TabsContent value="addNewMom">
-        <AddNewMomForm userToken={userToken} />
+        <AddNewMomForm userToken={userToken} isAdmin={userRole === userRoles.ADMIN} />
       </TabsContent>
     </Tabs>
     </div>

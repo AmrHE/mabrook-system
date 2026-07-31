@@ -2,7 +2,7 @@
  
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Label } from '../ui/label'
 import { Input } from '../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
@@ -12,13 +12,16 @@ import { Checkbox } from '../ui/checkbox'
 import SignatureCanvas from 'react-signature-canvas'
 import Image from 'next/image'
 import { toast } from 'sonner'
+import NationalitySelect from '@/components/NationalitySelect'
+import AppMultiSelect from '@/components/AppMultiSelect'
 
-const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, visit?: string | undefined }) => {
+const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | undefined, visit?: string | undefined, isAdmin?: boolean }) => {
   const router = useRouter()
   const params = useParams()
   const visitId = (params.id as string) || visit
 
   const [name, setName] = useState('')
+  const [age, setAge] = useState<number | null>(null)
   const [nationality, setNationality] = useState('')
   const [address, setAddress] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -28,10 +31,26 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
   const [numberOfMales, setNumberOfMales] = useState<number | null>(0)
   const [numberOfFemales, setNumberOfFemales] = useState<number | null>(0)
   const [genderOfNewborns, setGenderOfNewborns] = useState<string[]>([])
+  const [installedApp, setInstalledApp] = useState<string[]>([])
   const [signatureData, setSignatureData] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [responseMessage, setResponseMessage] = useState<string | null>("")
   const sigCanvas = useRef<SignatureCanvas>(null)
+
+  // Boxes available at this visit's hospital + the one the employee is handing out.
+  const [boxes, setBoxes] = useState<{ productId: string; name: string; quantity: number }[]>([])
+  const [boxId, setBoxId] = useState('')
+  const selectedBox = boxes.find((b) => b.productId === boxId)
+
+  useEffect(() => {
+    if (!visitId) return
+    fetch(`/api/product/hospital-stock?visitId=${visitId}`, {
+      headers: { authorization: `Bearer ${userToken}` },
+    })
+      .then((r) => r.json())
+      .then((j) => setBoxes(Array.isArray(j.boxes) ? j.boxes : []))
+      .catch(() => setBoxes([]))
+  }, [visitId, userToken])
 
   const handleGenderChange = (index: number, value: string) => {
     const updatedGenders = [...genderOfNewborns]
@@ -51,8 +70,16 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    setIsLoading(true)
     e.preventDefault()
+    if (!nationality) {
+      toast.error('الرجاء اختيار الجنسية')
+      return
+    }
+    if (!boxId) {
+      toast.error('الرجاء اختيار الصندوق')
+      return
+    }
+    setIsLoading(true)
 
     const signatureImage = sigCanvas.current?.isEmpty()
       ? null
@@ -85,6 +112,7 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
       body: JSON.stringify({
         visitId,
         name,
+        age,
         nationality,
         address,
         numberOfKids,
@@ -94,6 +122,8 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
         genderOfNewborns,
         phoneNumber,
         allowFutureCom,
+        installedApp,
+        boxId,
         signature: uploadedSignatureUrl, // ✅ save Cloudinary URL instead of base64
       }),
     })
@@ -101,10 +131,10 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
       const data = await res.json()
 
       if (!res.ok) {
-        toast.error('حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.');
-        toast.error(data.message);
+        toast.error(data.message || data.error || 'حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.');
         setIsLoading(false);
-        setResponseMessage(data.message || 'حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.');
+        setResponseMessage(data.message || data.error || 'حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.');
+        return;
       }
       toast.success('تمت إضافة الام بنجاح!');
       router.push(`/moms/${data.mom._id}`)
@@ -132,6 +162,17 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
         onChange={(e) => setPhoneNumber(e.target.value)}
       />
 
+      <Label htmlFor="age">العمر (اختياري)</Label>
+      <Input
+        placeholder="عمر الام"
+        id="age"
+        type="number"
+        min={0}
+        max={120}
+        value={age ?? ''}
+        onChange={(e) => setAge(e.target.value === '' ? null : Number(e.target.value))}
+      />
+
       <div className='flex gap-3'>
         <Checkbox
           id="allowFutureCom"
@@ -142,12 +183,11 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
       </div>
 
       <Label htmlFor="nationality">الجنسية</Label>
-      <Input
-        placeholder="جنسية الام"
-        id="nationality"
-        required
+      <NationalitySelect
         value={nationality}
-        onChange={(e) => setNationality(e.target.value)}
+        onChange={setNationality}
+        userToken={userToken}
+        isAdmin={isAdmin}
       />
 
       <Label htmlFor="address">العنوان</Label>
@@ -159,10 +199,38 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
         onChange={(e) => setAddress(e.target.value)}
       />
 
+      <Label>التطبيقات المثبّتة (اختياري)</Label>
+      <AppMultiSelect value={installedApp} onChange={setInstalledApp} />
+
+      <Label htmlFor="box">الصندوق الموزّع</Label>
+      <Select value={boxId} onValueChange={setBoxId}>
+        <SelectTrigger className='w-full'>
+          <SelectValue placeholder="اختر الصندوق" />
+        </SelectTrigger>
+        <SelectContent>
+          {boxes.length === 0 ? (
+            <SelectItem value="none" disabled>لا توجد صناديق</SelectItem>
+          ) : (
+            boxes.map((b) => (
+              <SelectItem key={b.productId} value={b.productId}>
+                {b.name} (المتبقي: {b.quantity})
+              </SelectItem>
+            ))
+          )}
+        </SelectContent>
+      </Select>
+      {selectedBox && selectedBox.quantity <= 0 && (
+        <p className='text-amber-600 text-sm'>
+          تنبيه: هذا الصندوق نفد من مخزون هذا المستشفى؛ سيصبح المخزون بالسالب عند الحفظ.
+        </p>
+      )}
+
       <Label htmlFor="numberOfKids">عدد الاطفال</Label>
       <Input
         placeholder="عدد الاطفال"
         id="numberOfKids"
+        type="number"
+        min={0}
         required
         value={numberOfKids ?? ''}
         onChange={(e) => setNumberOfKids(e.target.value === '' ? null : Number(e.target.value))}
@@ -172,6 +240,8 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
       <Input
         placeholder="عدد الاطفال حديثي الولادة"
         id="numberOfnewborns"
+        type="number"
+        min={0}
         required
         value={numberOfnewborns}
         onChange={handleNewbornCountChange}
@@ -181,6 +251,8 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
       <Input
         placeholder="عدد الاطفال الذكور"
         id="numberOfMales"
+        type="number"
+        min={0}
         required
         value={numberOfMales ?? ''}
         onChange={(e) => setNumberOfMales(e.target.value === '' ? null : Number(e.target.value))}
@@ -190,6 +262,8 @@ const AddNewMomForm = ({ userToken, visit }: { userToken: string | undefined, vi
       <Input
         placeholder="عدد الاطفال الاناث"
         id="numberOfFemales"
+        type="number"
+        min={0}
         required
         value={numberOfFemales ?? ''}
         onChange={(e) => setNumberOfFemales(e.target.value === '' ? null : Number(e.target.value))}
