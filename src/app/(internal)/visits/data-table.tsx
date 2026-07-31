@@ -1,11 +1,15 @@
 "use client"
 
+import { useState } from "react"
 import {
   ColumnDef,
+  SortingState,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
+import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react"
 
 import {
   Table,
@@ -27,11 +31,15 @@ export function DataTable<TData, TValue>({
   data,
   onRowClick,
 }: DataTableProps<TData, TValue>) {
-  
+  const [sorting, setSorting] = useState<SortingState>([])
+
   const table = useReactTable({
     data,
     columns,
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   })
 
   const handleRowClick = (row: TData) => {
@@ -47,14 +55,35 @@ export function DataTable<TData, TValue>({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
+                if (header.isPlaceholder) return <TableHead key={header.id} />
+                const canSort = header.column.getCanSort()
+                const sorted = header.column.getIsSorted()
                 return (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
+                    {canSort ? (
+                      <button
+                        type="button"
+                        onClick={header.column.getToggleSortingHandler()}
+                        className="inline-flex items-center gap-1 cursor-pointer select-none hover:text-foreground"
+                      >
+                        {flexRender(
                           header.column.columnDef.header,
                           header.getContext()
                         )}
+                        {sorted === "asc" ? (
+                          <ArrowUp className="size-3.5 shrink-0" />
+                        ) : sorted === "desc" ? (
+                          <ArrowDown className="size-3.5 shrink-0" />
+                        ) : (
+                          <ChevronsUpDown className="size-3.5 shrink-0 opacity-40" />
+                        )}
+                      </button>
+                    ) : (
+                      flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )
+                    )}
                   </TableHead>
                 )
               })}
