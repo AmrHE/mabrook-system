@@ -110,11 +110,20 @@ const VisitSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+}, {
+  /**
+   * The indexes below are NEW — this collection previously had none — so
+   * letting Mongoose build all five implicitly on a cold serverless start
+   * would stall the first request against a large visits collection. They are
+   * created explicitly and in the background by
+   * `POST /api/shift/backfill-day-shifts?createIndex=true`.
+   */
+  autoIndex: false,
 });
 
-// Every visit query used to be a collection scan — the model had no indexes at
-// all. These cover the dashboard's open/resumable lookups, the per-employee
-// lists, the shift join in the analytics pipelines, and the hospital reports.
+// Every visit query used to be a collection scan. These cover the dashboard's
+// open/resumable lookups, the per-employee lists, the shift join in the
+// analytics pipelines, and the hospital reports.
 VisitSchema.index({ shiftId: 1 });
 VisitSchema.index({ createdBy: 1, status: 1 });
 VisitSchema.index({ createdBy: 1, createdAt: -1 });

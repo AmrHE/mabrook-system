@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from "@/utils/auth/requireAdmin";
+import { requireAuth } from "@/utils/auth/requireAuth";
 import { initDb } from '../../../../lib/mongoose';
 import { Hospital } from '@/models/Hospital';
 import { Product } from '@/models/Product';
+import { User } from '@/models/User';
+import { userRoles } from '@/models/enum.constants';
 import { resolveCity, resolveDistrict } from '@/utils/geo/locations.server';
 
 export async function POST(req: NextRequest) {
   await initDb();
 
-  // Admin-only, matching hospitals/update and hospitals/assign-employees. This
-  // was previously open to any authenticated user.
-  const auth = requireAdmin(req);
+  // Open to any authenticated user: employees discover hospitals in the field
+  // and register them themselves. The one they create is assigned to them below.
+  const auth = requireAuth(req);
   if (auth.error) return auth.error;
   const userPayload = auth.payload;
 
@@ -68,6 +70,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Something Went Wrong' }, { status: 400 });
   }
 
+  // Employees only see (and can check in against) hospitals they are assigned
+  // to, so without this an employee would create a hospital and immediately
+  // lose sight of it. Admins and warehouse users already see everything, and
+  // assigning them would just pollute their assignment list.
+  if (userPayload.role === userRoles.EMPLOYEE) {
+    try {
+      await User.updateOne(
+        { _id: userPayload._id },
+        { $addToSet: { assignedHospitals: newHospital._id } },
+      );
+    } catch {
+      // Leaving the hospital behind would strand it: invisible to its creator
+      // and owned by nobody. Undo rather than report a success they can't see.
+      await Hospital.deleteOne({ _id: newHospital._id });
+      return NextResponse.json(
+        { error: 'تعذّر تعيين المستشفى لك. الرجاء المحاولة مرة أخرى.' },
+        { status: 500 },
+      );
+    }
+  }
+
   return NextResponse.json({ message: 'Hospital has been added successfully ', hospital: newHospital }, { status: 201 });
-  
+
 }

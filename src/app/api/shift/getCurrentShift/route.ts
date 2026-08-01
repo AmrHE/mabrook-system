@@ -4,8 +4,13 @@ import { requireAuth } from "@/utils/auth/requireAuth";
 import { Shift } from "@/models/Shift";
 import { shiftStatus } from "@/models/enum.constants";
 
+/**
+ * @deprecated Use `GET /api/shift/current-state`, which also reports the
+ * resumable shift, any stale open day, and the open/resumable visits. Kept for
+ * one release in case an older client is still cached.
+ */
 export async function GET(req: NextRequest) {
-  
+
   await initDb();
   const auth = requireAuth(req);
   if (auth.error) return auth.error;

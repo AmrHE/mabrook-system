@@ -406,6 +406,14 @@ async function indexReadiness() {
   return { missingDayKey, duplicateUserDay: dupes[0]?.total ?? 0 };
 }
 
+/**
+ * Build every index the new schema declares.
+ *
+ * Both models set `autoIndex: false`, so nothing is created implicitly — an
+ * implicit build over a year of shifts (or a visits collection that previously
+ * had no indexes at all) on a lazily-connecting serverless cold start is a real
+ * stall. Run this in a maintenance window; all builds are backgrounded.
+ */
 async function handleCreateIndex() {
   const readiness = await indexReadiness();
   if (readiness.missingDayKey > 0 || readiness.duplicateUserDay > 0) {
@@ -419,10 +427,38 @@ async function handleCreateIndex() {
     );
   }
 
+  const created: string[] = [];
+
+  // The structural guarantee of one shift per employee per day.
   await Shift.collection.createIndex(
     { userId: 1, dayKey: 1 },
     { unique: true, background: true, partialFilterExpression: { dayKey: { $type: "string" } } },
   );
+  created.push("shifts:userId_dayKey(unique)");
 
-  return NextResponse.json({ ok: true, indexReady: readiness, created: true }, { status: 200 });
+  const shiftIndexes: Record<string, any>[] = [
+    { userId: 1, status: 1 },
+    { status: 1, startTime: 1 },
+    { userId: 1, startTime: -1 },
+    { startFenceStatus: 1, startTime: -1 },
+    { status: 1, currentSegmentStartedAt: 1 },
+  ];
+  for (const spec of shiftIndexes) {
+    await Shift.collection.createIndex(spec, { background: true });
+    created.push(`shifts:${Object.keys(spec).join("_")}`);
+  }
+
+  const visitIndexes: Record<string, any>[] = [
+    { shiftId: 1 },
+    { createdBy: 1, status: 1 },
+    { createdBy: 1, createdAt: -1 },
+    { isActive: 1, createdAt: -1 },
+    { hospitalId: 1, createdAt: -1 },
+  ];
+  for (const spec of visitIndexes) {
+    await Visit.collection.createIndex(spec, { background: true });
+    created.push(`visits:${Object.keys(spec).join("_")}`);
+  }
+
+  return NextResponse.json({ ok: true, indexReady: readiness, created }, { status: 200 });
 }
