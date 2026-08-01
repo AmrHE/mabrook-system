@@ -20,6 +20,7 @@ import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { LatLng } from '@/components/HospitalLocationPicker';
 import LocationPicker from '@/components/LocationPicker';
+import EmployeeMultiSelect from '@/components/EmployeeMultiSelect';
 
 // Leaflet must never run on the server.
 const HospitalLocationPicker = dynamic(() => import('@/components/HospitalLocationPicker'), { ssr: false });
@@ -30,6 +31,9 @@ const AddNewHospitalDialog = ({userToken, isAdmin}: {userToken: string | undefin
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
   const [location, setLocation] = useState<LatLng | null>(null);
+  // Admin-only and optional. An employee is always assigned to what they create,
+  // so the picker would be meaningless for them.
+  const [employeeIds, setEmployeeIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
@@ -45,6 +49,7 @@ const AddNewHospitalDialog = ({userToken, isAdmin}: {userToken: string | undefin
         district,
         city,
         location: location ?? undefined,
+        employeeIds,
       }),
     });
     const data = await res.json();
@@ -103,6 +108,18 @@ const AddNewHospitalDialog = ({userToken, isAdmin}: {userToken: string | undefin
 
           <Label className="mt-2 text-sm text-gray-600">موقع المستشفى (لتقييد تسجيل الحضور)</Label>
           <HospitalLocationPicker value={location} onChange={setLocation} />
+
+          {/* Employees are assigned to their own hospital automatically, so this
+              picker is only meaningful — and only permitted — for admins. */}
+          {isAdmin && (
+            <>
+              <Label className="mt-2 text-sm text-gray-600">الموظفون المعينون (اختياري)</Label>
+              <EmployeeMultiSelect userToken={userToken} value={employeeIds} onChange={setEmployeeIds} />
+              <p className="text-xs text-gray-400">
+                يمكنك تركها فارغة الآن وتعيين الموظفين لاحقًا من صفحة المستشفى.
+              </p>
+            </>
+          )}
         </div>
         <DialogFooter className="sm:justify-start">
           <Button type="button" className='bg-[#5570F1] hover:bg-[#5570F1]' onClick={handleAddNewHospital} disabled={isLoading}>

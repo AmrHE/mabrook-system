@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import { requireAuth } from "@/utils/auth/requireAuth";
 import { initDb } from '../../../../lib/mongoose';
 import { Hospital } from '@/models/Hospital';
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({status: 400, message: 'Cannot identify the user Please re-login and try again'});
   }
 
-  const { name, district, city, location } = await req.json();
+  const { name, district, city, location, employeeIds } = await req.json();
   if (!name || !district || !city) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
@@ -70,23 +71,46 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Something Went Wrong' }, { status: 400 });
   }
 
-  // Employees only see (and can check in against) hospitals they are assigned
-  // to, so without this an employee would create a hospital and immediately
-  // lose sight of it. Admins and warehouse users already see everything, and
-  // assigning them would just pollute their assignment list.
-  if (userPayload.role === userRoles.EMPLOYEE) {
+  // Employees only see — and can check in against — hospitals they are assigned
+  // to, so an employee is always assigned to what they just created; otherwise
+  // it would vanish from their list the moment they saved it. Admins pick the
+  // assignees themselves in the dialog, and may pick none: a hospital with no
+  // assignees is simply admin/warehouse-only until someone is assigned later.
+  const isEmployee = userPayload.role === userRoles.EMPLOYEE;
+  const assignees: string[] = isEmployee
+    ? [userPayload._id]
+    : userPayload.role === userRoles.ADMIN
+      ? (Array.isArray(employeeIds) ? employeeIds : []).filter(
+          (x: unknown): x is string => typeof x === 'string' && mongoose.isValidObjectId(x),
+        )
+      : [];
+
+  if (assignees.length > 0) {
     try {
-      await User.updateOne(
-        { _id: userPayload._id },
+      // Role/isActive live in the filter so a hand-crafted id list can't assign
+      // a hospital to an admin, a warehouse account, or a deleted user.
+      await User.updateMany(
+        { _id: { $in: assignees }, isActive: true, role: userRoles.EMPLOYEE },
         { $addToSet: { assignedHospitals: newHospital._id } },
       );
     } catch {
-      // Leaving the hospital behind would strand it: invisible to its creator
-      // and owned by nobody. Undo rather than report a success they can't see.
-      await Hospital.deleteOne({ _id: newHospital._id });
+      if (isEmployee) {
+        // Stranded otherwise: invisible to its creator and owned by nobody.
+        // Undo rather than report a success they cannot see.
+        await Hospital.deleteOne({ _id: newHospital._id });
+        return NextResponse.json(
+          { error: 'تعذّر تعيين المستشفى لك. الرجاء المحاولة مرة أخرى.' },
+          { status: 500 },
+        );
+      }
+      // For an admin the assignment was optional and the hospital is already
+      // visible to them, so keep it and let them assign from its page.
       return NextResponse.json(
-        { error: 'تعذّر تعيين المستشفى لك. الرجاء المحاولة مرة أخرى.' },
-        { status: 500 },
+        {
+          message: 'تمت إضافة المستشفى، لكن تعذّر تعيين الموظفين. يمكنك تعيينهم من صفحة المستشفى.',
+          hospital: newHospital,
+        },
+        { status: 201 },
       );
     }
   }
