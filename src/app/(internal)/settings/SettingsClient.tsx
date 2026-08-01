@@ -39,6 +39,14 @@ const STOCK_FIELDS: { key: keyof SettingsType; label: string; hint: string; type
   { key: "lowStockThreshold", label: "حد المخزون المنخفض", hint: "أقل من هذا العدد (وأعلى من حد النفاد) يُعتبر منخفضًا", type: "number" },
 ];
 
+// Tuning for the low-productivity visit flag. The rule is relative: a visit is
+// flagged when its أمهات/ساعة falls below a percentage of the team's own average.
+const PRODUCTIVITY_FIELDS: { key: keyof SettingsType; label: string; hint: string; type: "number" }[] = [
+  { key: "lowMomRateRatioPercent", label: "نسبة الإنتاجية المنخفضة (%)", hint: "تُعلَّم الزيارة عندما يقل معدل أمهاتها في الساعة عن هذه النسبة من متوسط الفريق", type: "number" },
+  { key: "lowMomRateMinVisitMinutes", label: "أقل مدة زيارة للتقييم (دقائق)", hint: "الزيارات الأقصر من هذه المدة لا تُقيَّم ولا تدخل في حساب متوسط الفريق", type: "number" },
+  { key: "lowMomRateBaselineDays", label: "فترة حساب متوسط الفريق (أيام)", hint: "عدد الأيام الماضية المستخدمة لحساب متوسط أمهات/ساعة للفريق", type: "number" },
+];
+
 /**
  * Reusable card for an admin-managed string list (projects, apps, …). Loads the
  * list from `listEndpoint` (reading `json[listKey]`) and supports add / rename /
@@ -584,6 +592,40 @@ export default function SettingsClient({ userToken }: { userToken?: string }) {
             </div>
           ) : settings ? (
             STOCK_FIELDS.map((f) => (
+              <div key={String(f.key)} className="grid gap-1.5">
+                <Label htmlFor={String(f.key)}>{f.label}</Label>
+                <Input
+                  id={String(f.key)}
+                  type="number"
+                  min={0}
+                  value={String(settings[f.key] ?? "")}
+                  onChange={(e) => update(f.key, e.target.value)}
+                  className="max-w-xs"
+                />
+                <p className="text-xs text-gray-400">{f.hint}</p>
+              </div>
+            ))
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">تنبيه الإنتاجية المنخفضة</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <p className="text-xs text-gray-500">
+            تُقارَن كل زيارة منتهية بمتوسط الفريق (أمهات/ساعة) خلال الفترة المحددة أدناه، وتُعلَّم الزيارات
+            التي تقل إنتاجيتها كثيرًا عن المتوسط. لا تشمل الزيارات القصيرة ولا الزيارات بلا أمهات.
+          </p>
+          {!settings && !error ? (
+            <div className="space-y-4">
+              {PRODUCTIVITY_FIELDS.map((f) => (
+                <Skeleton key={String(f.key)} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : settings ? (
+            PRODUCTIVITY_FIELDS.map((f) => (
               <div key={String(f.key)} className="grid gap-1.5">
                 <Label htmlFor={String(f.key)}>{f.label}</Label>
                 <Input

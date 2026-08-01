@@ -1,30 +1,37 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import jwt from 'jsonwebtoken';
+import { requireAuth } from "@/utils/auth/requireAuth";
 import { Hospital } from "@/models/Hospital";
 import { User } from "@/models/User";
+import { userRoles } from "@/models/enum.constants";
 // import { Product } from "@/models/Product";
 
 export async function GET(req: NextRequest) {
   await initDb();
-  /***************AUTH GAURD START****************/
-  const authHeader = req.headers.get('authorization');
-  const userToken = authHeader?.split(" ")[1];
-  if (!userToken){
-    return NextResponse.json({status: 401, message: "Session has timed out. Please log in to use Mabrook System"})
-  }
-
-  const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
-  /***************AUTH GAURD END****************/
+  const auth = requireAuth(req);
+  if (auth.error) return auth.error;
+  const userPayload = auth.payload;
 
 
   if (!userPayload) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
   }
 
+  // Admins and warehouse users see every hospital. Employees see only the ones
+  // they are assigned to (mirrors update-products-quantity). Scoping here rather
+  // than in the page means the restriction holds for every caller of this
+  // endpoint, not just the one UI that happens to render it.
+  let filter: Record<string, unknown> = { isActive: true };
+  if (userPayload.role === userRoles.EMPLOYEE) {
+    const me = await User.findById(userPayload._id).select("assignedHospitals").lean();
+    const assigned = ((me as any)?.assignedHospitals || []).map((h: any) => h.toString());
+    // `$in: []` already yields an empty list, so no zero-assignment special case.
+    filter = { isActive: true, _id: { $in: assigned } };
+  }
+
   const hospitals = await Hospital
-  .find({ isActive: true })
+  .find(filter)
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
   .sort({ createdAt: -1 })
   .lean();

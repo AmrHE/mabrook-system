@@ -17,6 +17,7 @@ export interface DqCategory {
     | "unsignedMoms"
     | "duplicatePhones"
     | "visitsWithZeroMoms"
+    | "lowMomRateVisits"
     | "openShifts";
   label: string;
   titleAr: string;
@@ -103,15 +104,39 @@ export const DQ_CATEGORIES: DqCategory[] = [
     rangeBound: true,
   },
   {
+    slug: "low-mom-rate-visits",
+    statKey: "lowMomRateVisits",
+    label: "زيارات بإنتاجية منخفضة",
+    titleAr: "زيارات بإنتاجية منخفضة",
+    subtitleAr:
+      "زيارات منتهية سجّلت أمهات بمعدل (أمهات/ساعة) أقل بكثير من متوسط الفريق. " +
+      "لا تشمل الزيارات القصيرة ولا الزيارات بلا أمهات (لها تنبيه منفصل).",
+    columns: [
+      { key: "hospital", header: "المستشفى" },
+      { key: "city", header: "المدينة" },
+      { key: "employee", header: "الموظف" },
+      { key: "momsCount", header: "عدد الأمهات" },
+      { key: "durationHours", header: "المدة (ساعات)" },
+      { key: "momsPerHour", header: "أمهات/ساعة" },
+      { key: "createdAt", header: "تاريخ الزيارة" },
+    ],
+    filename: "low-mom-rate-visits.csv",
+    rangeBound: true,
+  },
+  {
     slug: "open-shifts",
     statKey: "openShifts",
-    label: "ورديات مفتوحة حالياً",
-    titleAr: "ورديات مفتوحة حالياً",
-    subtitleAr: "جميع الورديات المفتوحة حالياً بغض النظر عن الفترة المحددة.",
+    // A shift now spans a whole day, so "open right now" mostly means "at work".
+    // What is actually a defect is a day that was never closed.
+    label: "أيام دوام متروكة مفتوحة",
+    titleAr: "أيام دوام متروكة مفتوحة",
+    subtitleAr: "أيام دوام من تواريخ سابقة لم يتم إنهاؤها، بغض النظر عن الفترة المحددة.",
     columns: [
       { key: "employee", header: "الموظف" },
       { key: "email", header: "البريد" },
-      { key: "startTime", header: "بدء الوردية" },
+      { key: "startTime", header: "أول دخول" },
+      { key: "openSince", header: "بداية الجلسة المفتوحة" },
+      { key: "sessionsCount", header: "الجلسات" },
       { key: "elapsedHours", header: "الساعات المنقضية" },
     ],
     filename: "open-shifts.csv",

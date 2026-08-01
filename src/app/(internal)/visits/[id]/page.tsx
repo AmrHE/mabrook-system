@@ -2,7 +2,8 @@ export const dynamic = "force-dynamic";
 
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
+import { requireServerSession } from '@/utils/auth/serverSession.server';
 import React from 'react'
 import {
   Tabs,
@@ -15,9 +16,18 @@ import { shiftStatus, userRoles } from '@/models/enum.constants';
 import { ClientDataTable } from './client-data-table';
 import { columns } from './columns';
 import EndVisitButton from '@/components/EndVisitButton';
+import ResumeVisitButton from '@/components/ResumeVisitButton';
 import DeleteVisitButton from '@/components/DeleteVisitButton';
 import LocationModal from '@/components/LocationModal';
 import FenceBadge from '@/components/FenceBadge';
+import LowMomRateBadge from '@/components/LowMomRateBadge';
+import VisitNotesModal from '@/components/VisitNotesModal';
+import {
+  isLowMomRateVisit,
+  visitDurationHours,
+  visitMomsPerHour,
+  type MomRateBaseline,
+} from '@/utils/analytics/visitProductivity';
 
 
 type Mom = {
@@ -32,11 +42,9 @@ type Mom = {
 }
 
 const SingleVisitPage = async ({ params }: { params: Promise<{ id: string }> }) => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
-  const userId = cookieStore.get('userId')?.value;
-  const userRole = cookieStore.get('role')?.value;
-  const visitStatus = cookieStore.get('visitStatus')?.value;
+  const { userToken, payload } = await requireServerSession();
+  const userId = payload._id;
+  const userRole = payload.role;
   const headersList = await headers();
   const host = headersList.get('host');
 
@@ -69,6 +77,21 @@ async function getMomsData(visitId: string, userToken: any) {
   const visit = await getVisitData(id, userToken);
   const moms = await getMomsData(id, userToken);
 
+  // Productivity is derived at read time from the team baseline the API returns.
+  const momRateBaseline: MomRateBaseline | undefined = visit?.momRateBaseline;
+  const durationHours = visit?.visit ? visitDurationHours(visit.visit) : null;
+  const lowMomRate =
+    visit?.visit && momRateBaseline ? isLowMomRateVisit(visit.visit, momRateBaseline) : null;
+  const notesBy = visit?.visit?.notesUpdatedBy;
+
+  // Gate on THIS visit's own status, not a browser-wide cookie. The cookie was
+  // global, so opening an ended visit while another was open showed an "end
+  // visit" button on the wrong record — and it died on browser close, hiding the
+  // button on a visit that was genuinely still open.
+  const isOwner = visit?.visit?.createdBy?._id === userId;
+  const isVisitOpen = visit?.visit?.status === shiftStatus.IN_PROGRESS;
+  const canEndVisit = isVisitOpen && (isOwner || userRole === userRoles.ADMIN);
+
   const processedMoms: Mom[] = [];
   if (moms.moms.length > 0) {
     moms.moms.map((mom: any) => {
@@ -98,8 +121,11 @@ async function getMomsData(visitId: string, userToken: any) {
       {visit && (
         <div className='flex items-center justify-between mb-10'>
           <h1 className='text-gray-800 font-bold text-3xl'>زيارة مستشفى {visit.visit?.hospitalId?.name}</h1>
-          {visitStatus === shiftStatus.IN_PROGRESS && (
+          {canEndVisit && (
             <EndVisitButton id={id} userToken={userToken}/>
+          )}
+          {!isVisitOpen && isOwner && (
+            <ResumeVisitButton id={id} userToken={userToken}/>
           )}
         </div>
       )}
@@ -108,7 +134,7 @@ async function getMomsData(visitId: string, userToken: any) {
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="visitDetails" className='cursor-pointer'>تفاصيل الزيارة</TabsTrigger>
         <TabsTrigger value="moms" className='cursor-pointer'>تفاصيل الامهات</TabsTrigger>
-        {visitStatus === shiftStatus.IN_PROGRESS && visit.visit.createdBy._id === userId &&(
+        {isVisitOpen && isOwner &&(
           <TabsTrigger value="addNewMom" className='cursor-pointer'>اضافة ام جديدة</TabsTrigger>
         )}
       </TabsList>
@@ -119,13 +145,15 @@ async function getMomsData(visitId: string, userToken: any) {
             <p>التاريخ</p>
             {/* <p>رقم الزيارة</p> */}
             <p>توقيت البدأ</p>
+            <p>توقيت الانتهاء</p>
+            <p>مدة الزيارة</p>
+            <p>الإنتاجية</p>
             <p>اسم الموظف</p>
           </div>
           <div className='flex flex-col gap-5'>
-            <p>{new Date(visit.visit.startTime).toLocaleString("en-SA", {
+            <p>{new Date(visit.visit.createdAt).toLocaleDateString("en-SA", {
                 timeZone: "Asia/Riyadh",
                 dateStyle: "medium",
-                timeStyle: "short",
               })}</p>
             {/* <p className='max-w-28 truncate'>{visit.visit._id}</p> */}
             <p>{new Date(visit.visit.startTime).toLocaleString("en-SA", {
@@ -133,6 +161,21 @@ async function getMomsData(visitId: string, userToken: any) {
                 dateStyle: "medium",
                 timeStyle: "short",
               })}</p>
+            <p>{visit.visit.endTime
+              ? new Date(visit.visit.endTime).toLocaleString("en-SA", {
+                  timeZone: "Asia/Riyadh",
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })
+              : '—'}</p>
+            <p>{durationHours != null ? `${durationHours} ساعة` : '—'}</p>
+            <p>
+              <LowMomRateBadge
+                low={durationHours == null ? null : lowMomRate}
+                momsPerHour={visitMomsPerHour(visit.visit)}
+                baselineDays={momRateBaseline?.baselineDays}
+              />
+            </p>
             <p>{`${visit.visit.createdBy.firstName} ${visit.visit.createdBy.lastName}`}</p>
           </div>
         </div>
@@ -165,7 +208,25 @@ async function getMomsData(visitId: string, userToken: any) {
           </div>
         </div>
 
-        
+        <h4 className='mt-16 mb-4 font-semibold text-gray-700 text-xl'>ملاحظات الزيارة</h4>
+        <div className='max-w-[700px]'>
+          {visit.visit.notes ? (
+            <p className='whitespace-pre-wrap text-gray-700'>{visit.visit.notes}</p>
+          ) : (
+            <p className='text-gray-400'>لا توجد ملاحظات</p>
+          )}
+          <div className='mt-4'>
+            <VisitNotesModal
+              variant="inline"
+              visitId={id}
+              initialNotes={visit.visit.notes ?? ''}
+              updatedByName={notesBy ? `${notesBy.firstName ?? ''} ${notesBy.lastName ?? ''}`.trim() : undefined}
+              updatedAt={visit.visit.notesUpdatedAt ?? null}
+              userToken={userToken}
+            />
+          </div>
+        </div>
+
         <div className='mt-10'>
           {userRole === userRoles.ADMIN && (
             <DeleteVisitButton id={id} userToken={userToken!} />

@@ -16,6 +16,9 @@ export const DEFAULT_SETTINGS = {
   geofenceRadiusMeters: 200,
   outOfStockThreshold: OUT_OF_STOCK_THRESHOLD,
   lowStockThreshold: LOW_STOCK_THRESHOLD,
+  lowMomRateRatioPercent: 50,
+  lowMomRateMinVisitMinutes: 45,
+  lowMomRateBaselineDays: 90,
   timezone: TIMEZONE,
 } as const;
 
@@ -31,6 +34,9 @@ export interface AttendanceSettings {
   geofenceRadiusMeters: number;
   outOfStockThreshold: number;
   lowStockThreshold: number;
+  lowMomRateRatioPercent: number;
+  lowMomRateMinVisitMinutes: number;
+  lowMomRateBaselineDays: number;
   timezone: string;
 }
 
@@ -59,6 +65,9 @@ export async function getSettings(): Promise<AttendanceSettings> {
     geofenceRadiusMeters: doc?.geofenceRadiusMeters ?? DEFAULT_SETTINGS.geofenceRadiusMeters,
     outOfStockThreshold: doc?.outOfStockThreshold ?? DEFAULT_SETTINGS.outOfStockThreshold,
     lowStockThreshold: doc?.lowStockThreshold ?? DEFAULT_SETTINGS.lowStockThreshold,
+    lowMomRateRatioPercent: doc?.lowMomRateRatioPercent ?? DEFAULT_SETTINGS.lowMomRateRatioPercent,
+    lowMomRateMinVisitMinutes: doc?.lowMomRateMinVisitMinutes ?? DEFAULT_SETTINGS.lowMomRateMinVisitMinutes,
+    lowMomRateBaselineDays: doc?.lowMomRateBaselineDays ?? DEFAULT_SETTINGS.lowMomRateBaselineDays,
     timezone: doc?.timezone ?? DEFAULT_SETTINGS.timezone,
   };
 }

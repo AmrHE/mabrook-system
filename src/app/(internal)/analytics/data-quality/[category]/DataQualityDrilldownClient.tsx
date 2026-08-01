@@ -33,6 +33,9 @@ export default function DataQualityDrilldownClient({
   userToken,
 }: Props) {
   const [rows, setRows] = useState<any[]>([]);
+  // Only the productivity category returns this; every other drill-down renders
+  // exactly as before.
+  const [meta, setMeta] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +53,10 @@ export default function DataQualityDrilldownClient({
         });
         if (!res.ok) throw new Error(`فشل تحميل البيانات (${res.status})`);
         const json = await res.json();
-        if (!cancelled) setRows(json.rows || []);
+        if (!cancelled) {
+          setRows(json.rows || []);
+          setMeta(json.meta ?? null);
+        }
       } catch (e: any) {
         if (!cancelled) setError(e?.message || "تعذّر تحميل البيانات");
       } finally {
@@ -77,6 +83,15 @@ export default function DataQualityDrilldownClient({
           </Link>
           <h1 className="font-bold text-3xl">{titleAr}</h1>
           {subtitleAr && <p className="text-sm text-muted-foreground mt-1">{subtitleAr}</p>}
+          {/* The cutoff moves with the rolling baseline, so record what it was
+              when this table (and any CSV taken from it) was produced. */}
+          {meta && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {meta.ready
+                ? `متوسط الفريق: ${meta.teamAvgMomsPerHour} أم/ساعة · حد التنبيه: ${meta.thresholdMomsPerHour} أم/ساعة · أقل مدة معتبرة: ${meta.minMinutes} دقيقة · محسوب على آخر ${meta.baselineDays} يوم`
+                : "لا توجد بيانات كافية لحساب متوسط الفريق بعد."}
+            </p>
+          )}
         </div>
       </div>
 

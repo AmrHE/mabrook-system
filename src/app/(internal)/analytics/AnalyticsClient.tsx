@@ -9,8 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DateRangeFilter, { type ResolvedRange } from "@/components/DateRangeFilter";
 import FilterableTable from "@/components/FilterableTable";
 import LocationModal from "@/components/LocationModal";
+import SessionsModal from "@/components/SessionsModal";
 import FenceBadge from "@/components/FenceBadge";
 import { fenceStatusLabel } from "@/utils/geo/geofence";
+import { closeReasonLabel, formatSessionSpan } from "@/utils/shift/labels";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { CsvColumn } from "@/utils/export/toCsv";
 import MomsTrendChart from "@/components/charts/MomsTrendChart";
@@ -264,9 +266,21 @@ function EmployeesTab({ userToken, range }: TabProps) {
           <MetricBarChart data={rows} nameKey="name" valueKey="totalHours" seriesName="ساعات" color={CHART_COLORS.green} topN={10} />
         </ChartSlot>
       </ChartCard>
-      <ChartCard title="الإنتاجية (أمهات/ساعة)">
+      {/* momsPerHour is moms per SHIFT hour; momsPerVisitHour below is moms per
+          VISIT hour. Different denominators — keep both, keep them distinct. */}
+      <ChartCard title="الإنتاجية (أمهات/ساعة عمل)">
         <ChartSlot busy={busy} error={error}>
           <MetricBarChart data={rows} nameKey="name" valueKey="momsPerHour" seriesName="أمهات/ساعة" color={CHART_COLORS.purple} topN={10} />
+        </ChartSlot>
+      </ChartCard>
+      <ChartCard title="الإنتاجية داخل الزيارات (أمهات/ساعة زيارة)">
+        <ChartSlot busy={busy} error={error}>
+          <MetricBarChart data={rows} nameKey="name" valueKey="momsPerVisitHour" seriesName="أمهات/ساعة زيارة" color={CHART_COLORS.teal} topN={10} />
+        </ChartSlot>
+      </ChartCard>
+      <ChartCard title="⚠ زيارات بإنتاجية منخفضة">
+        <ChartSlot busy={busy} error={error}>
+          <MetricBarChart data={rows} nameKey="name" valueKey="lowMomRateVisits" seriesName="زيارات" color={CHART_COLORS.red} topN={10} />
         </ChartSlot>
       </ChartCard>
       <ChartCard title="نسبة التوقيع حسب الموظف">
@@ -387,6 +401,7 @@ function ShiftsTab({ userToken, range }: TabProps) {
   const { data: patterns, error: patErr } = useJson<any>(query ? `/api/analytics/shift-patterns?${query}` : null, userToken);
   const { data: durations, error: durErr } = useJson<any>(query ? `/api/analytics/visit-durations?${query}` : null, userToken);
   const { data: open, error: openErr } = useJson<any>(query ? `/api/analytics/open-shifts` : null, userToken);
+  const { data: slow, error: slowErr } = useJson<any>(query ? `/api/analytics/low-mom-rate-visits?${query}` : null, userToken);
   const rows = report?.data || [];
 
   return (
@@ -401,9 +416,21 @@ function ShiftsTab({ userToken, range }: TabProps) {
           <MetricBarChart data={rows} nameKey="name" valueKey="workingDays" seriesName="أيام" color={CHART_COLORS.orange} topN={10} />
         </ChartSlot>
       </ChartCard>
-      <ChartCard title="توزيع ساعة بدء الدوام">
+      <ChartCard title="توزيع ساعة أول تسجيل دخول">
         <ChartSlot busy={!patterns && !patErr} error={patErr}>
-          <MetricBarChart data={patterns?.byStartHour || []} nameKey="hour" valueKey="count" seriesName="ورديات" layout="horizontal" sort={false} color={CHART_COLORS.primary} percentOfTotal />
+          <MetricBarChart data={patterns?.byFirstCheckInHour || patterns?.byStartHour || []} nameKey="hour" valueKey="count" seriesName="أيام" layout="horizontal" sort={false} color={CHART_COLORS.primary} percentOfTotal />
+        </ChartSlot>
+      </ChartCard>
+      <ChartCard title="توزيع ساعات تسجيل الدخول (كل الجلسات)">
+        <ChartSlot busy={!patterns && !patErr} error={patErr}>
+          <MetricBarChart data={patterns?.byCheckInHour || []} nameKey="hour" valueKey="count" seriesName="جلسات" layout="horizontal" sort={false} color={CHART_COLORS.teal} percentOfTotal />
+        </ChartSlot>
+      </ChartCard>
+      {/* How often a day gets split — the behaviour "استئناف الدوام" enables,
+          and the number to watch when reviewing whether it is being abused. */}
+      <ChartCard title="عدد الجلسات في اليوم">
+        <ChartSlot busy={!patterns && !patErr} error={patErr}>
+          <MetricBarChart data={patterns?.sessionBins || []} nameKey="label" valueKey="count" seriesName="أيام" layout="horizontal" sort={false} color={CHART_COLORS.orange} percentOfTotal />
         </ChartSlot>
       </ChartCard>
       <ChartCard title="توزيع مدة الزيارة">
@@ -412,9 +439,9 @@ function ShiftsTab({ userToken, range }: TabProps) {
         </ChartSlot>
       </ChartCard>
       <div className="lg:col-span-2">
-        <ChartCard title="⚠ دوام لم يُغلق">
-          <ChartSlot busy={!open && !openErr} error={openErr}>
-            <AttentionPanel openShifts={open?.data || []} products={[]} />
+        <ChartCard title="⚠ يحتاج انتباه">
+          <ChartSlot busy={(!open && !openErr) || (!slow && !slowErr)} error={openErr || slowErr}>
+            <AttentionPanel openShifts={open?.data || []} products={[]} lowMomRateVisits={slow?.data || []} />
           </ChartSlot>
         </ChartCard>
       </div>
@@ -536,14 +563,6 @@ function FunnelQualityTab({ userToken, range }: TabProps) {
   );
 }
 
-const CLOSE_REASON_AR: Record<string, string> = {
-  MANUAL: "يدوي",
-  LOGOUT: "تسجيل خروج",
-  MAX_DURATION: "تجاوز المدة",
-  INACTIVITY: "خمول",
-  DUPLICATE: "مكرر",
-};
-
 const fmtDT = (d: any) =>
   d ? new Date(d).toLocaleString("en-SA", { timeZone: "Asia/Riyadh", dateStyle: "short", timeStyle: "short" }) : "—";
 
@@ -581,7 +600,7 @@ function AttendanceTab({ userToken, range }: TabProps) {
   const onTimeRate = totalAttended ? Math.round((1 - totalLate / totalAttended) * 100) : 0;
   const avgAttendance = rep.length ? Math.round(rep.reduce((s, r) => s + (r.attendanceRate || 0), 0) / rep.length) : 0;
   const totalHours = Math.round(rep.reduce((s, r) => s + (r.totalHours || 0), 0));
-  const autoClosed = rep.reduce((s, r) => s + (r.autoClosedShifts || 0), 0);
+  const autoClosed = rep.reduce((s, r) => s + (r.autoClosedSessions || 0), 0);
   let startMinTotal = 0;
   let startWeight = 0;
   for (const r of rep) {
@@ -593,24 +612,47 @@ function AttendanceTab({ userToken, range }: TabProps) {
   }
   const avgStart = startWeight ? minutesToHHMM(startMinTotal / startWeight) : "—";
 
-  // Check-in map points + per-shift table rows from the detail endpoint.
+  // Check-in map points + per-day table rows from the detail endpoint.
   const det: any[] = detail?.data || [];
-  const mapPoints = det
-    .filter((d) => d.startLocation && Number.isFinite(d.startLocation.lat) && Number.isFinite(d.startLocation.lng))
-    .map((d) => ({
-      lat: d.startLocation.lat,
-      lng: d.startLocation.lng,
-      employee: d.employee || "غير محدد",
-      time: fmtDT(d.startTime),
-      onTime: !!d.onTime,
-    }));
+
+  /**
+   * One pin per CHECK-IN, not per day. A shift document now spans a whole day,
+   * so plotting `d.startLocation` alone would drop every resume check-in from
+   * the map. Rows with no sessions are legacy and fall back to the day's own
+   * coordinates.
+   */
+  const mapPoints = det.flatMap((d) => {
+    const sessions = d.sessions?.length
+      ? d.sessions
+      : [{ startTime: d.startTime, startLocation: d.startLocation }];
+    return sessions
+      .filter((s: any) => s.startLocation && Number.isFinite(s.startLocation.lat) && Number.isFinite(s.startLocation.lng))
+      .map((s: any) => ({
+        lat: s.startLocation.lat,
+        lng: s.startLocation.lng,
+        employee: d.employee || "غير محدد",
+        time: fmtDT(s.startTime),
+        // Punctuality is a property of the DAY's first arrival, so later
+        // sessions inherit it rather than being judged as late arrivals.
+        onTime: !!d.onTime,
+      }));
+  });
 
   const tableRows = det.map((d) => ({
     id: d.shiftId,
     employee: d.employee || "غير محدد",
+    dayKey: d.dayKey ?? "",
     start: fmtDT(d.startTime),
     end: fmtDT(d.endTime),
     durationHours: d.durationHours ?? "—",
+    sessionsCount: d.sessionsCount ?? 1,
+    sessions: (d.sessions ?? []).map((s: any) => ({
+      ...s,
+      closeReason: closeReasonLabel(s.closeReason),
+    })),
+    sessionsText: (d.sessions ?? [])
+      .map((s: any) => formatSessionSpan(s.startTime, s.endTime))
+      .join(" | "),
     visitsCount: d.visitsCount ?? 0,
     momsCount: d.momsCount ?? 0,
     productsCount: d.productsCount ?? 0,
@@ -625,14 +667,20 @@ function AttendanceTab({ userToken, range }: TabProps) {
     fenceDistance: d.startDistanceMeters ?? null,
     fenceLabel: fenceStatusLabel(d.startFenceStatus),
     autoClosed: d.autoClosed ? "نعم" : "لا",
-    closeReason: d.closeReason ? CLOSE_REASON_AR[d.closeReason] ?? d.closeReason : "",
+    closeReason: closeReasonLabel(d.closeReason),
   }));
 
   const shiftCols: ColumnDef<any, any>[] = [
     { accessorKey: "employee", header: "الموظف" },
-    { accessorKey: "start", header: "البداية" },
-    { accessorKey: "end", header: "النهاية" },
-    { accessorKey: "durationHours", header: "المدة (س)" },
+    { accessorKey: "dayKey", header: "التاريخ" },
+    { accessorKey: "start", header: "أول دخول" },
+    { accessorKey: "end", header: "آخر خروج" },
+    { accessorKey: "durationHours", header: "ساعات العمل" },
+    {
+      accessorKey: "sessionsCount",
+      header: "الجلسات",
+      cell: ({ row }) => <SessionsModal sessions={row.original.sessions} count={row.original.sessionsCount} />,
+    },
     { accessorKey: "visitsCount", header: "زيارات" },
     { accessorKey: "momsCount", header: "أمهات" },
     { accessorKey: "productsCount", header: "منتجات" },
@@ -659,9 +707,12 @@ function AttendanceTab({ userToken, range }: TabProps) {
   ];
   const shiftExportCols: CsvColumn<any>[] = [
     { key: "employee", header: "الموظف" },
-    { key: "start", header: "البداية" },
-    { key: "end", header: "النهاية" },
-    { key: "durationHours", header: "المدة (س)" },
+    { key: "dayKey", header: "التاريخ" },
+    { key: "start", header: "أول دخول" },
+    { key: "end", header: "آخر خروج" },
+    { key: "durationHours", header: "ساعات العمل" },
+    { key: "sessionsCount", header: "عدد الجلسات" },
+    { key: "sessionsText", header: "تفاصيل الجلسات" },
     { key: "visitsCount", header: "زيارات" },
     { key: "momsCount", header: "أمهات" },
     { key: "productsCount", header: "منتجات" },
@@ -712,9 +763,9 @@ function AttendanceTab({ userToken, range }: TabProps) {
             <MetricBarChart data={rep} nameKey="name" valueKey="hoursMetRate" seriesName="% ساعات" color={CHART_COLORS.primary} topN={10} />
           </ChartSlot>
         </ChartCard>
-        <ChartCard title="متوسط الأمهات لكل وردية">
+        <ChartCard title="متوسط الأمهات لكل يوم عمل">
           <ChartSlot busy={repBusy} error={repErr}>
-            <MetricBarChart data={rep} nameKey="name" valueKey="avgMomsPerShift" seriesName="أمهات/وردية" color={CHART_COLORS.purple} topN={10} />
+            <MetricBarChart data={rep} nameKey="name" valueKey="avgMomsPerDay" seriesName="أمهات/يوم" color={CHART_COLORS.purple} topN={10} />
           </ChartSlot>
         </ChartCard>
       </div>
@@ -755,7 +806,7 @@ function AttendanceTab({ userToken, range }: TabProps) {
             series={[
               { key: "presentEmployees", label: "الحاضرون", color: CHART_COLORS.primary },
               { key: "onLeaveEmployees", label: "في إجازة معتمدة", color: CHART_COLORS.orange },
-              { key: "lateCount", label: "ورديات متأخرة", color: CHART_COLORS.red },
+              { key: "lateCount", label: "أيام تأخير", color: CHART_COLORS.red },
               { key: "totalHours", label: "إجمالي الساعات", color: CHART_COLORS.green },
             ]}
           />

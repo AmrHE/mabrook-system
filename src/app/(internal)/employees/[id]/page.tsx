@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import Image from 'next/image';
 import React from 'react'
 import {
@@ -16,6 +17,12 @@ import EmployeeShiftsTable from '@/components/EmployeeShiftsTable';
 import EmployeeLeavesTable from '@/components/EmployeeLeavesTable';
 import VisitsTable, { type VisitRow } from '@/components/VisitsTable';
 import { userRoles, shiftStatus } from '@/models/enum.constants';
+import {
+  isLowMomRateVisit,
+  visitDurationHours,
+  visitMomsPerHour,
+  type MomRateBaseline,
+} from '@/utils/analytics/visitProductivity';
 
 const coordText = (loc: any) =>
   loc && Number.isFinite(loc?.lat) && Number.isFinite(loc?.lng) ? `${loc.lat}, ${loc.lng}` : '';
@@ -39,25 +46,41 @@ async function getdEmployeeData(id: string, userToken: any) {
 
 const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
-  const userRole = cookieStore.get('role')?.value;
+  const { userToken, payload } = await requireServerSession();
+  const userRole = payload.role;
   const employee = await getdEmployeeData(id, userToken);
+
+  // Same baseline the analytics use, so a visit's verdict here matches /visits.
+  const momRateBaseline: MomRateBaseline | undefined = employee?.momRateBaseline;
 
   const processedVisits: VisitRow[] = (employee?.user?.visits || [])
     .filter((v: any) => v.isActive !== false)
-    .map((v: any) => ({
-      id: v._id,
-      hospitalName: v.hospitalId?.name ?? '—',
-      city: v.hospitalId?.city ?? '—',
-      district: v.hospitalId?.district ?? '—',
-      momsCount: v.moms?.length ?? 0,
-      statusLabel: v.status === shiftStatus.ENDED ? 'منتهية' : 'جارية',
-      startLoc: rawCoord(v.startLocation),
-      endLoc: rawCoord(v.endLocation),
-      startLocationText: coordText(v.startLocation),
-      endLocationText: coordText(v.endLocation),
-    }));
+    .map((v: any) => {
+      const low = momRateBaseline ? isLowMomRateVisit(v, momRateBaseline) : null;
+      const durationHours = visitDurationHours(v);
+
+      return {
+        id: v._id,
+        hospitalName: v.hospitalId?.name ?? '—',
+        city: v.hospitalId?.city ?? '—',
+        district: v.hospitalId?.district ?? '—',
+        momsCount: v.moms?.length ?? 0,
+        statusLabel: v.status === shiftStatus.ENDED ? 'منتهية' : 'جارية',
+        durationHours,
+        momsPerHour: visitMomsPerHour(v),
+        lowMomRate: durationHours == null ? null : low,
+        lowMomRateLabel: durationHours == null || low == null ? '' : low ? 'نعم' : 'لا',
+        baselineDays: momRateBaseline?.baselineDays,
+        notes: v.notes ?? '',
+        notesUpdatedAt: v.notesUpdatedAt ?? null,
+        startLoc: rawCoord(v.startLocation),
+        endLoc: rawCoord(v.endLocation),
+        startLocationText: coordText(v.startLocation),
+        endLocationText: coordText(v.endLocation),
+      };
+    });
+
+  const lowMomRateVisitsCount = processedVisits.filter((v) => v.lowMomRate).length;
 
   return (
     <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
@@ -108,6 +131,7 @@ const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }>
             <p>اخر تسجيل دخول</p>
             <p>عدد الزيارات المسجلة</p>
             <p>عدد الدوامات المسجلة</p>
+            <p>زيارات بإنتاجية منخفضة</p>
           </div>
           <div className='flex flex-col gap-5'>
             <p>
@@ -129,6 +153,7 @@ const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }>
               })}</p>
             <p>{employee.user.visits.filter((visit: { isActive: boolean; }) => visit.isActive === true).length}</p>
             <p>{employee.user.shifts.length}</p>
+            <p className={lowMomRateVisitsCount > 0 ? 'text-orange-600 font-medium' : ''}>{lowMomRateVisitsCount}</p>
           </div>
         </div>
 
@@ -178,7 +203,7 @@ const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }>
       </TabsContent>
       <TabsContent value="visits">
         <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>زيارات الموظف</h4>
-        <VisitsTable data={processedVisits} filename={`employee-${id}-visits.csv`} />
+        <VisitsTable data={processedVisits} filename={`employee-${id}-visits.csv`} userToken={userToken} />
       </TabsContent>
       <TabsContent value="attendance">
         <h4 className='mt-8 mb-4 font-semibold text-gray-700 text-xl'>سجل الورديات والحضور (آخر ٦ أشهر)</h4>

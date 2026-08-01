@@ -135,6 +135,8 @@ const TABS: TabConfig[] = [
       { key: "startTime", header: "البداية" },
       { key: "endTime", header: "النهاية" },
       { key: "durationHours", header: "المدة (ساعات)" },
+      { key: "momsPerHour", header: "أمهات/ساعة" },
+      { key: "lowMomRateLabel", header: "إنتاجية منخفضة" },
       {
         // Merged location column (start = green, end = red); CSV exports the start coords.
         key: "startLocation",
@@ -151,6 +153,18 @@ const TABS: TabConfig[] = [
           />
         ),
       },
+      {
+        // Read-only here: the aggregation projects `_id: 0`, so there is no
+        // visit id to PATCH. Editing lives on /visits and the visit detail page.
+        key: "notes",
+        header: "ملاحظات",
+        sortable: false,
+        cell: (r) => (
+          <span className="block max-w-[220px] truncate" title={r.notes}>
+            {r.notes || "—"}
+          </span>
+        ),
+      },
     ],
     filters: [
       { key: "city", label: "المدينة" },
@@ -158,6 +172,8 @@ const TABS: TabConfig[] = [
       { key: "hospital", label: "المستشفى" },
       { key: "employee", label: "الموظف" },
       { key: "status", label: "الحالة" },
+      // Not `notes` — free text would explode the facet list.
+      { key: "lowMomRateLabel", label: "إنتاجية منخفضة" },
     ],
     filename: "visits.csv",
   },
@@ -177,10 +193,13 @@ const TABS: TabConfig[] = [
       { key: "email", header: "البريد" },
       { key: "moms", header: "الأمهات" },
       { key: "visits", header: "الزيارات" },
-      { key: "shiftsCount", header: "الورديات" },
+      { key: "sessionsCount", header: "الجلسات" },
       { key: "totalHours", header: "الساعات" },
       { key: "workingDays", header: "أيام العمل" },
-      { key: "avgMomsPerShift", header: "معدل/وردية" },
+      { key: "avgMomsPerDay", header: "معدل/يوم" },
+      { key: "visitHours", header: "ساعات الزيارات" },
+      { key: "momsPerVisitHour", header: "أمهات/ساعة زيارة" },
+      { key: "lowMomRateVisits", header: "زيارات إنتاجية منخفضة" },
       { key: "appInstalls", header: "تثبيت التطبيقات" },
       { key: "momsWithApp", header: "أمهات بتطبيق" },
       { key: "hasOpenShift", header: "وردية مفتوحة" },
@@ -227,10 +246,11 @@ const TABS: TabConfig[] = [
       { key: "avgStartTime", header: "متوسط البدء" },
       { key: "totalHours", header: "الساعات" },
       { key: "hoursMetRate", header: "% إنجاز الساعات" },
-      { key: "shiftsCount", header: "الورديات" },
-      { key: "avgVisitsPerShift", header: "زيارات/وردية" },
-      { key: "avgMomsPerShift", header: "أمهات/وردية" },
-      { key: "autoClosedRate", header: "% إغلاق تلقائي" },
+      { key: "sessionsCount", header: "الجلسات" },
+      { key: "avgVisitsPerDay", header: "زيارات/يوم" },
+      { key: "avgMomsPerDay", header: "أمهات/يوم" },
+      { key: "autoClosedRate", header: "% جلسات أُغلقت تلقائياً" },
+      { key: "forgotDaysRate", header: "% أيام بدون إنهاء" },
       { key: "pendingRequests", header: "طلبات معلّقة" },
       { key: "isOnShift", header: "في الدوام" },
     ],

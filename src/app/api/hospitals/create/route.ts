@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { requireAdmin } from "@/utils/auth/requireAdmin";
 import { initDb } from '../../../../lib/mongoose';
 import { Hospital } from '@/models/Hospital';
 import { Product } from '@/models/Product';
@@ -8,22 +8,15 @@ import { resolveCity, resolveDistrict } from '@/utils/geo/locations.server';
 export async function POST(req: NextRequest) {
   await initDb();
 
-  /***************AUTH GAURD START****************/
-  const authHeader = req.headers.get('authorization');
-  const userToken = authHeader?.split(' ')[1];
-  if (!userToken) {
-    return NextResponse.json({
-      status: 401,
-      message: 'Session has timed out. Please log in to use Mabrook System',
-    });
-  }
-
-  const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string };
+  // Admin-only, matching hospitals/update and hospitals/assign-employees. This
+  // was previously open to any authenticated user.
+  const auth = requireAdmin(req);
+  if (auth.error) return auth.error;
+  const userPayload = auth.payload;
 
   if (!userPayload._id) {
     return NextResponse.json({status: 400, message: 'Cannot identify the user Please re-login and try again'});
   }
-  /***************AUTH GAURD END****************/
 
   const { name, district, city, location } = await req.json();
   if (!name || !district || !city) {

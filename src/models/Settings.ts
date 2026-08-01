@@ -38,6 +38,15 @@ const SettingsSchema = new mongoose.Schema(
     outOfStockThreshold: { type: Number, default: 20 },
     lowStockThreshold: { type: Number, default: 50 },
 
+    // Low-productivity visit flag. A visit is flagged when its moms-per-hour
+    // falls below `lowMomRateRatioPercent`% of the team's pooled average over
+    // the last `lowMomRateBaselineDays` days. Visits shorter than
+    // `lowMomRateMinVisitMinutes` are neither judged nor counted in the average
+    // (their rate hinges on a single mom). See utils/analytics/visitProductivity.ts.
+    lowMomRateRatioPercent: { type: Number, default: 50 },
+    lowMomRateMinVisitMinutes: { type: Number, default: 45 },
+    lowMomRateBaselineDays: { type: Number, default: 90 },
+
     timezone: { type: String, default: "Asia/Riyadh" },
   },
   { timestamps: true },

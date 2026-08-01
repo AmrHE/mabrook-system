@@ -6,6 +6,7 @@ import { parseRange } from "@/utils/date/range";
 import { shiftStatus } from "@/models/enum.constants";
 import { Visit } from "@/models/Visit";
 import { excludeUsers, getExcludedUserIds } from "@/utils/analytics/excludedUsers";
+import { visitDurHExpr } from "@/utils/analytics/visitProductivity";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,9 @@ export async function GET(req: NextRequest) {
           ...excludeUsers("createdBy", excludedIds),
         },
       },
-      { $project: { durH: { $divide: [{ $subtract: ["$endTime", "$startTime"] }, 3600000] } } },
+      // Sessions, not the raw span — a resumed visit must not be charged for the
+      // gap between its sessions (see visitDurHExpr).
+      { $project: { durH: visitDurHExpr() } },
       { $match: { durH: { $gte: 0 } } },
       {
         $facet: {

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import React from 'react'
 import {
   Tabs,
@@ -29,9 +30,8 @@ return res.json();
 
 
 const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> }) => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
-  const userRole = cookieStore.get('role')?.value;
+  const { userToken, payload } = await requireServerSession();
+  const userRole = payload.role;
   const isAdmin = userRole === userRoles.ADMIN;
 
 
@@ -39,6 +39,21 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
   const hospital = await getHospitalData(id, userToken);
 
   const h = hospital?.hospital;
+
+  // An employee opening a hospital they aren't assigned to gets a 403, leaving
+  // `h` undefined. Without this guard HospitalStockDetails would receive
+  // `productStocks={undefined}` and throw on .map().
+  if (!h) {
+    return (
+      <div className='p-5 w-full min-h-[92vh] bg-white rounded-3xl overflow-hidden'>
+        <h1 className='text-gray-800 font-bold text-3xl mb-4'>غير مصرح لك بعرض هذه المستشفى</h1>
+        <p className='text-gray-500'>
+          يمكنك عرض المستشفيات المعيّنة لك فقط. تواصل مع المدير لتعيينك إلى مستشفى.
+        </p>
+      </div>
+    );
+  }
+
   const hasLocation = h?.location?.lat != null && h?.location?.lng != null;
   const assignedEmployees: any[] = hospital?.assignedEmployees || [];
   const assignedNames = assignedEmployees.map((e) => `${e.firstName ?? ''} ${e.lastName ?? ''}`.trim()).filter(Boolean).join('، ');

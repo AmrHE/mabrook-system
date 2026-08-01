@@ -6,6 +6,7 @@ import { parseRange, TIMEZONE } from "@/utils/date/range";
 import { shiftStatus } from "@/models/enum.constants";
 import { Visit } from "@/models/Visit";
 import { excludeUsers, getExcludedUserIds } from "@/utils/analytics/excludedUsers";
+import { getMomRateBaseline, lowMomRateExpr, visitDurHExpr } from "@/utils/analytics/visitProductivity";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const { from, to } = parseRange(req.nextUrl.searchParams);
-    const excludedIds = await getExcludedUserIds();
+    const [excludedIds, baseline] = await Promise.all([getExcludedUserIds(), getMomRateBaseline()]);
 
     const agg = await Visit.aggregate([
       { $match: { isActive: true, createdAt: { $gte: from, $lt: to }, ...excludeUsers("createdBy", excludedIds) } },
@@ -49,13 +50,31 @@ export async function GET(req: NextRequest) {
           status: 1,
           startTime: 1,
           endTime: 1,
+          // Sessions, not the raw span — a resumed visit must not be charged for
+          // the gap. visitDurHExpr falls back to the span for pre-resume rows.
           durationHours: {
             $cond: [
               { $and: [{ $eq: ["$status", shiftStatus.ENDED] }, { $ne: ["$endTime", null] }] },
-              { $round: [{ $divide: [{ $subtract: ["$endTime", "$startTime"] }, 3600000] }, 1] },
+              { $round: [visitDurHExpr(), 1] },
               null,
             ],
           },
+          momsPerHour: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ["$status", shiftStatus.ENDED] },
+                  { $ne: ["$endTime", null] },
+                  { $gt: [visitDurHExpr(), 0] },
+                ],
+              },
+              { $round: [{ $divide: [{ $size: { $ifNull: ["$moms", []] } }, visitDurHExpr()] }, 1] },
+              null,
+            ],
+          },
+          // Same expression the data-quality counter uses, so the two agree.
+          lowMomRate: lowMomRateExpr(baseline),
+          notes: { $ifNull: ["$notes", ""] },
           startLocation: 1,
           endLocation: 1,
         },
@@ -74,6 +93,11 @@ export async function GET(req: NextRequest) {
       startTime: fmt(r.startTime),
       endTime: fmt(r.endTime),
       durationHours: r.durationHours ?? "",
+      momsPerHour: r.momsPerHour ?? "",
+      // Plain strings so the facet filter and CSV work with no extra wiring;
+      // "" for visits the flag doesn't judge, which matches neither facet option.
+      lowMomRateLabel: r.durationHours == null ? "" : r.lowMomRate ? "نعم" : "لا",
+      notes: r.notes ?? "",
       startLocation: coord(r.startLocation),
       endLocation: coord(r.endLocation),
       startLoc: rawCoord(r.startLocation),

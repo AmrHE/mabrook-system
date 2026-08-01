@@ -2,7 +2,7 @@
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/utils/auth/requireAdmin";
-import { parseRange, TIMEZONE } from "@/utils/date/range";
+import { parseRange, riyadhDayKey, TIMEZONE } from "@/utils/date/range";
 import { shiftStatus } from "@/models/enum.constants";
 import { Mom } from "@/models/Mom";
 import { Visit } from "@/models/Visit";
@@ -10,6 +10,7 @@ import { Shift } from "@/models/Shift";
 import { excludeUsers, getExcludedUserIds } from "@/utils/analytics/excludedUsers";
 import { normalizeNationality } from "@/utils/nationality/normalize";
 import { DQ_BY_SLUG } from "@/utils/analytics/dataQualityCategories";
+import { getMomRateBaseline, lowMomRateFilter, visitDurHExpr } from "@/utils/analytics/visitProductivity";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,9 @@ export async function GET(req: NextRequest) {
     const byEmployee = excludeUsers("createdBy", excludedIds);
     const byShiftOwner = excludeUsers("userId", excludedIds);
     let rows: any[] = [];
+    // Only the productivity category returns this; the drill-down renders it as
+    // a caption so an exported CSV still records the cutoff it was taken at.
+    let meta: Record<string, unknown> | undefined;
 
     switch (cfg.slug) {
       case "moms-missing-phone": {
@@ -178,24 +182,95 @@ export async function GET(req: NextRequest) {
         break;
       }
 
+      case "low-mom-rate-visits": {
+        const baseline = await getMomRateBaseline();
+        meta = {
+          teamAvgMomsPerHour: baseline.teamAvgMomsPerHour,
+          thresholdMomsPerHour: baseline.thresholdMomsPerHour,
+          minMinutes: Math.round(baseline.minHours * 60),
+          baselineDays: baseline.baselineDays,
+          ready: baseline.ready,
+        };
+
+        const agg = await Visit.aggregate([
+          // Identical filter object to the count route's — see lowMomRateFilter.
+          { $match: lowMomRateFilter(baseline, { createdAt: inRange, ...byEmployee }) },
+          {
+            $addFields: {
+              // Sessions, not the raw span (see visitDurHExpr).
+              durH: visitDurHExpr(),
+              momsCount: { $size: { $ifNull: ["$moms", []] } },
+            },
+          },
+          {
+            $addFields: {
+              durationHours: { $round: ["$durH", 1] },
+              // Off the unrounded duration, so a 1dp display value can't skew it.
+              momsPerHour: { $round: [{ $divide: ["$momsCount", "$durH"] }, 1] },
+            },
+          },
+          { $lookup: { from: "hospitals", localField: "hospitalId", foreignField: "_id", as: "hospital" } },
+          { $unwind: { path: "$hospital", preserveNullAndEmptyArrays: true } },
+          { $lookup: { from: "users", localField: "createdBy", foreignField: "_id", as: "employee" } },
+          { $unwind: { path: "$employee", preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              _id: 0,
+              hospital: { $ifNull: ["$hospital.name", "غير محدد"] },
+              city: { $ifNull: ["$hospital.city", ""] },
+              employee: {
+                $trim: { input: { $concat: [{ $ifNull: ["$employee.firstName", ""] }, " ", { $ifNull: ["$employee.lastName", ""] }] } },
+              },
+              momsCount: 1,
+              durationHours: 1,
+              momsPerHour: 1,
+              createdAt: 1,
+            },
+          },
+          // Worst first — this is a triage list, not a chronological log.
+          { $sort: { momsPerHour: 1 } },
+        ]);
+        rows = (agg as any[]).map((r) => ({
+          hospital: r.hospital,
+          city: r.city,
+          employee: r.employee || "غير محدد",
+          momsCount: r.momsCount,
+          durationHours: r.durationHours,
+          momsPerHour: r.momsPerHour,
+          createdAt: fmt(r.createdAt),
+        }));
+        break;
+      }
+
       case "open-shifts": {
-        // Deliberately not range-bound, matching the panel's global count.
+        // Deliberately not range-bound, matching the panel's global count — and
+        // filtered to PAST days for the same reason (see the count route).
         const now = new Date();
-        const shifts = await Shift.find({ status: shiftStatus.IN_PROGRESS, ...byShiftOwner })
+        const shifts = await Shift.find({
+          status: shiftStatus.IN_PROGRESS,
+          ...byShiftOwner,
+          $or: [{ dayKey: { $lt: riyadhDayKey(now) } }, { dayKey: { $exists: false } }],
+        })
           .populate({ path: "userId", model: "User", select: "firstName lastName email" })
           .sort({ startTime: 1 })
           .lean();
-        rows = (shifts as any[]).map((s) => ({
-          employee: s.userId ? `${s.userId.firstName ?? ""} ${s.userId.lastName ?? ""}`.trim() || "غير محدد" : "غير محدد",
-          email: s.userId?.email ?? "",
-          startTime: fmt(s.startTime),
-          elapsedHours: Math.round(((now.getTime() - new Date(s.startTime).getTime()) / 3600000) * 10) / 10,
-        }));
+        rows = (shifts as any[]).map((s) => {
+          // Elapsed since the running SESSION began, not the day's first check-in.
+          const openSince = s.currentSegmentStartedAt ?? s.startTime;
+          return {
+            employee: s.userId ? `${s.userId.firstName ?? ""} ${s.userId.lastName ?? ""}`.trim() || "غير محدد" : "غير محدد",
+            email: s.userId?.email ?? "",
+            startTime: fmt(s.startTime),
+            openSince: fmt(openSince),
+            sessionsCount: Math.max(1, s.segments?.length ?? 1),
+            elapsedHours: Math.round(((now.getTime() - new Date(openSince).getTime()) / 3600000) * 10) / 10,
+          };
+        });
         break;
       }
     }
 
-    return NextResponse.json({ rows }, { status: 200 });
+    return NextResponse.json({ rows, meta }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json({ status: 500, message: err?.message || "Failed to compute data quality rows" }, { status: 500 });
   }

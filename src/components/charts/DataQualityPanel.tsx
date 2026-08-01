@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { AlertTriangle, Clock, Copy, FileX, MapPinOff, PhoneOff } from "lucide-react";
+import { AlertTriangle, Clock, Copy, FileX, MapPinOff, PhoneOff, TrendingDown } from "lucide-react";
 import { fmtNumber } from "./constants";
 import { DQ_CATEGORIES, type DqCategory } from "@/utils/analytics/dataQualityCategories";
 
@@ -12,6 +12,7 @@ interface QualityStats {
   unsignedMoms?: number;
   duplicatePhones?: number;
   visitsWithZeroMoms?: number;
+  lowMomRateVisits?: number;
   openShifts?: number;
 }
 
@@ -22,6 +23,7 @@ const ICONS: Record<DqCategory["statKey"], { icon: ReactNode; color: string }> =
   unsignedMoms: { icon: <FileX className="size-4" />, color: "text-amber-600" },
   duplicatePhones: { icon: <Copy className="size-4" />, color: "text-amber-600" },
   visitsWithZeroMoms: { icon: <AlertTriangle className="size-4" />, color: "text-orange-600" },
+  lowMomRateVisits: { icon: <TrendingDown className="size-4" />, color: "text-orange-600" },
   openShifts: { icon: <Clock className="size-4" />, color: "text-orange-600" },
 };
 

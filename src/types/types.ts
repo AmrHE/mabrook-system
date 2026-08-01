@@ -41,5 +41,8 @@ export interface SettingsType {
   geofenceRadiusMeters: number;
   outOfStockThreshold: number;
   lowStockThreshold: number;
+  lowMomRateRatioPercent: number;
+  lowMomRateMinVisitMinutes: number;
+  lowMomRateBaselineDays: number;
   timezone: string;
 }

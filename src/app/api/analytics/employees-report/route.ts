@@ -14,6 +14,7 @@ import {
 } from "@/utils/attendance/arrivals";
 import { buildLeaveLedger, countNotIn, emptyLeaveLedgerEntry } from "@/utils/leave/leaveLedger";
 import { excludeUsers, getExcludedUserIds } from "@/utils/analytics/excludedUsers";
+import { getMomRateBaseline, lowMomRateExpr, visitDurHExpr } from "@/utils/analytics/visitProductivity";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,10 @@ export async function GET(req: NextRequest) {
     const { from, to } = parseRange(req.nextUrl.searchParams);
     const settings = await getSettings();
     const lateThreshold = lateThresholdMinutes(settings);
-    const excludedIds = await getExcludedUserIds();
+    const [excludedIds, momRateBaseline] = await Promise.all([
+      getExcludedUserIds(),
+      getMomRateBaseline(),
+    ]);
 
     // Kicked off before the (much heavier) aggregate so all three run concurrently.
     const shiftStatsPromise = loadShiftStats(from, to);
@@ -108,21 +112,50 @@ export async function GET(req: NextRequest) {
           isOnShift: { $ifNull: ["$isOnShift", false] },
           visits: { $size: "$rangeVisits" },
           moms: { $size: "$rangeMoms" },
-          shiftsCount: { $size: "$rangeShifts" },
+          // A shift document IS a working day now, so the old `shiftsCount`
+          // would just duplicate `workingDays`. What is actually informative is
+          // how many check-in → check-out sessions those days took.
+          sessionsCount: {
+            $sum: {
+              $map: {
+                input: "$rangeShifts",
+                as: "s",
+                in: { $max: [1, { $size: { $ifNull: ["$$s.segments", []] } }] },
+              },
+            },
+          },
+          // Summed sessions, not the day's span: the span would include the
+          // breaks between sessions and inflate every split day.
           totalHours: {
             $round: [
               {
                 $sum: {
                   $map: {
-                    input: {
-                      $filter: {
-                        input: "$rangeShifts",
-                        as: "s",
-                        cond: { $and: [{ $eq: ["$$s.status", shiftStatus.ENDED] }, { $ne: ["$$s.endTime", null] }] },
-                      },
-                    },
+                    input: "$rangeShifts",
                     as: "s",
-                    in: { $max: [0, { $divide: [{ $subtract: ["$$s.endTime", "$$s.startTime"] }, 3600000] }] },
+                    in: {
+                      $cond: [
+                        { $gt: [{ $ifNull: ["$$s.workedMinutes", 0] }, 0] },
+                        { $divide: ["$$s.workedMinutes", 60] },
+                        {
+                          $cond: [
+                            {
+                              $and: [
+                                { $eq: ["$$s.status", shiftStatus.ENDED] },
+                                { $ne: ["$$s.endTime", null] },
+                              ],
+                            },
+                            {
+                              $max: [
+                                0,
+                                { $divide: [{ $subtract: ["$$s.endTime", "$$s.startTime"] }, 3600000] },
+                              ],
+                            },
+                            0,
+                          ],
+                        },
+                      ],
+                    },
                   },
                 },
               },
@@ -136,19 +169,60 @@ export async function GET(req: NextRequest) {
                   $map: {
                     input: "$rangeShifts",
                     as: "s",
-                    in: { $dateTrunc: { date: "$$s.startTime", unit: "day", timezone: TIMEZONE } },
+                    in: {
+                      $ifNull: [
+                        "$$s.dayKey",
+                        {
+                          $dateToString: {
+                            date: "$$s.startTime",
+                            format: "%Y-%m-%d",
+                            timezone: TIMEZONE,
+                          },
+                        },
+                      ],
+                    },
                   },
                 },
                 [],
               ],
             },
           },
-          avgMomsPerShift: {
+          avgMomsPerDay: {
             $cond: [
               { $gt: [{ $size: "$rangeShifts" }, 0] },
               { $round: [{ $divide: [{ $size: "$rangeMoms" }, { $size: "$rangeShifts" }] }, 1] },
               0,
             ],
+          },
+          // Hours spent *inside visits* — distinct from `totalHours`, which is
+          // shift hours. The two productivity metrics must not be conflated.
+          visitHours: {
+            $round: [
+              {
+                $sum: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: "$rangeVisits",
+                        as: "v",
+                        cond: { $and: [{ $eq: ["$$v.status", shiftStatus.ENDED] }, { $ne: ["$$v.endTime", null] }] },
+                      },
+                    },
+                    as: "v",
+                    // Sessions, not the raw span (see visitDurHExpr).
+                    in: { $max: [0, visitDurHExpr("$$v.")] },
+                  },
+                },
+              },
+              1,
+            ],
+          },
+          // The `$$v.` root is why lowMomRateExpr takes a prefix — same predicate
+          // as the data-quality counter, evaluated inside this $filter.
+          lowMomRateVisits: {
+            $size: {
+              $filter: { input: "$rangeVisits", as: "v", cond: lowMomRateExpr(momRateBaseline, "$$v.") },
+            },
           },
           hasOpenShift: { $gt: [{ $size: "$openShifts" }, 0] },
           lastShiftStart: { $max: "$rangeShifts.startTime" },
@@ -211,6 +285,13 @@ export async function GET(req: NextRequest) {
         $addFields: {
           momsPerHour: {
             $cond: [{ $gt: ["$totalHours", 0] }, { $round: [{ $divide: ["$moms", "$totalHours"] }, 1] }, 0],
+          },
+          // Directional, not an audit: this divides the employee's range moms by
+          // their visit hours, whereas the per-visit flag counts each visit's own
+          // `moms` array. The two can differ slightly (a mom recorded outside a
+          // visit, a visit straddling the range edge) — don't reconcile to the decimal.
+          momsPerVisitHour: {
+            $cond: [{ $gt: ["$visitHours", 0] }, { $round: [{ $divide: ["$moms", "$visitHours"] }, 1] }, 0],
           },
         },
       },

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import AddNewHospitalDialog from '@/components/AddNewHospitalDialog';
 import HospitalsTable, { type HospitalRow } from '@/components/HospitalsTable';
 import { userRoles } from '@/models/enum.constants';
@@ -10,9 +11,8 @@ const coordText = (loc: any) =>
   loc && Number.isFinite(loc?.lat) && Number.isFinite(loc?.lng) ? `${loc.lat}, ${loc.lng}` : '';
 
 const HospitalsPage = async () => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
-  const isAdmin = cookieStore.get('role')?.value === userRoles.ADMIN;
+  const { userToken, payload } = await requireServerSession();
+  const isAdmin = payload.role === userRoles.ADMIN;
 
   const headersList = await headers();
   const host = headersList.get('host');
@@ -45,10 +45,20 @@ const HospitalsPage = async () => {
   return (
     <div>
       <div className='flex items-center justify-between mb-6'>
-        <h1 className='text-3xl font-bold p-4'>المستشفيات</h1>
-        <AddNewHospitalDialog userToken={userToken} isAdmin={isAdmin} />
+        {/* Employees only ever see their own assignments, so name the list for
+            what it is rather than letting a short list look like missing data. */}
+        <h1 className='text-3xl font-bold p-4'>{isAdmin ? 'المستشفيات' : 'المستشفيات المعيّنة لي'}</h1>
+        {isAdmin && <AddNewHospitalDialog userToken={userToken} isAdmin={isAdmin} />}
       </div>
-      <HospitalsTable data={processedHospitals} />
+      {processedHospitals.length === 0 && !isAdmin ? (
+        // The shared DataTable's empty state is a hardcoded English "No results."
+        <div className='rounded-2xl bg-gray-50 px-6 py-10 text-center'>
+          <p className='text-gray-700 font-medium mb-1'>لم يتم تعيينك إلى أي مستشفى بعد.</p>
+          <p className='text-gray-500 text-sm'>تواصل مع المدير لتعيينك إلى المستشفيات التي ستعمل بها.</p>
+        </div>
+      ) : (
+        <HospitalsTable data={processedHospitals} />
+      )}
     </div>
   )
 }

@@ -2,12 +2,13 @@
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/utils/auth/requireAdmin";
-import { parseRange } from "@/utils/date/range";
+import { parseRange, riyadhDayKey } from "@/utils/date/range";
 import { shiftStatus } from "@/models/enum.constants";
 import { Mom } from "@/models/Mom";
 import { Visit } from "@/models/Visit";
 import { Shift } from "@/models/Shift";
 import { excludeUsers, getExcludedUserIds } from "@/utils/analytics/excludedUsers";
+import { getMomRateBaseline, lowMomRateFilter } from "@/utils/analytics/visitProductivity";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,12 @@ export async function GET(req: NextRequest) {
   try {
     const { from, to } = parseRange(req.nextUrl.searchParams);
     const inRange = { $gte: from, $lt: to };
-    const excludedIds = await getExcludedUserIds();
+    // The baseline is its own aggregation, so kick it off alongside the
+    // excluded-account lookup rather than serialising the two.
+    const [excludedIds, momRateBaseline] = await Promise.all([
+      getExcludedUserIds(),
+      getMomRateBaseline(),
+    ]);
     // Mom/Visit attribute to `createdBy`, Shift to `userId`.
     const byEmployee = excludeUsers("createdBy", excludedIds);
     const byShiftOwner = excludeUsers("userId", excludedIds);
@@ -31,6 +37,7 @@ export async function GET(req: NextRequest) {
       momsMissingNationality,
       unsignedMoms,
       visitsWithZeroMoms,
+      lowMomRateVisits,
       openShifts,
       dupAgg,
     ] = await Promise.all([
@@ -38,7 +45,17 @@ export async function GET(req: NextRequest) {
       Mom.countDocuments({ isActive: true, createdAt: inRange, ...byEmployee, $or: [{ nationality: null }, { nationality: "" }] }),
       Mom.countDocuments({ isActive: true, createdAt: inRange, ...byEmployee, $or: [{ signature: null }, { signature: "" }] }),
       Visit.countDocuments({ isActive: true, createdAt: inRange, ...byEmployee, $or: [{ moms: { $size: 0 } }, { moms: { $exists: false } }] }),
-      Shift.countDocuments({ status: shiftStatus.IN_PROGRESS, ...byShiftOwner }),
+      // Same filter object the rows route uses — that's what keeps this count
+      // and the drill-down table in agreement.
+      Visit.countDocuments(lowMomRateFilter(momRateBaseline, { createdAt: inRange, ...byEmployee })),
+      // Only shifts left open from a PAST day. Now that a shift spans a whole
+      // day, "currently open" mostly means "people are at work right now",
+      // which is not a data-quality defect; a day that never got closed is.
+      Shift.countDocuments({
+        status: shiftStatus.IN_PROGRESS,
+        ...byShiftOwner,
+        $or: [{ dayKey: { $lt: riyadhDayKey(new Date()) } }, { dayKey: { $exists: false } }],
+      }),
       Mom.aggregate([
         { $match: { isActive: true, createdAt: inRange, ...byEmployee, phoneNumber: { $nin: ["", null] } } },
         { $group: { _id: "$phoneNumber", count: { $sum: 1 } } },
@@ -53,6 +70,7 @@ export async function GET(req: NextRequest) {
         momsMissingNationality,
         unsignedMoms,
         visitsWithZeroMoms,
+        lowMomRateVisits,
         openShifts,
         duplicatePhones: dupAgg[0]?.dupes || 0,
       },

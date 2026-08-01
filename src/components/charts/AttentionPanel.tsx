@@ -1,21 +1,30 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertTriangle, Clock, HelpCircle, PackageX } from "lucide-react";
+import { AlertTriangle, Clock, HelpCircle, PackageX, TrendingDown } from "lucide-react";
 import { fmtNumber } from "./constants";
 import { OUT_OF_STOCK_THRESHOLD, LOW_STOCK_THRESHOLD } from "@/utils/stock/thresholds";
 
 type OpenShift = { shiftId: string; employeeName: string; elapsedHours: number };
 type Product = { productId: string; name: string; totalQuantity: number; questionsCount: number };
+type LowMomRateVisit = {
+  visitId: string;
+  employeeName: string;
+  hospitalName: string;
+  momsCount: number;
+  durationHours: number;
+};
 
 export default function AttentionPanel({
   openShifts,
   products,
+  lowMomRateVisits,
   outOfStockThreshold = OUT_OF_STOCK_THRESHOLD,
   lowStockThreshold = LOW_STOCK_THRESHOLD,
 }: {
   openShifts: OpenShift[];
   products: Product[];
+  lowMomRateVisits?: LowMomRateVisit[];
   outOfStockThreshold?: number;
   lowStockThreshold?: number;
 }) {
@@ -26,9 +35,15 @@ export default function AttentionPanel({
   );
   const noQuestions = list.filter((p) => (p.questionsCount || 0) === 0);
   const shifts = openShifts || [];
+  // Already filtered and sorted worst-first by /api/analytics/low-mom-rate-visits.
+  const slowVisits = lowMomRateVisits || [];
 
   const empty =
-    shifts.length === 0 && outOfStock.length === 0 && lowStock.length === 0 && noQuestions.length === 0;
+    shifts.length === 0 &&
+    outOfStock.length === 0 &&
+    lowStock.length === 0 &&
+    noQuestions.length === 0 &&
+    slowVisits.length === 0;
 
   if (empty) {
     return (
@@ -44,6 +59,21 @@ export default function AttentionPanel({
         <Section icon={<Clock className="size-4" />} color="text-orange-600" title={`دوام لم يُغلق (${shifts.length})`}>
           {shifts.slice(0, 5).map((s) => (
             <Row key={s.shiftId} label={s.employeeName} value={`${fmtNumber(s.elapsedHours)} ساعة`} />
+          ))}
+        </Section>
+      )}
+      {slowVisits.length > 0 && (
+        <Section
+          icon={<TrendingDown className="size-4" />}
+          color="text-orange-600"
+          title={`زيارات بإنتاجية منخفضة (${slowVisits.length})`}
+        >
+          {slowVisits.slice(0, 5).map((v) => (
+            <Row
+              key={v.visitId}
+              label={`${v.employeeName} — ${v.hospitalName}`}
+              value={`${fmtNumber(v.momsCount)} أم / ${v.durationHours} س`}
+            />
           ))}
         </Section>
       )}

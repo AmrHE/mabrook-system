@@ -29,6 +29,7 @@ interface AnalyticsData {
   products: any[];
   productThresholds: { outOfStock: number; lowStock: number } | null;
   openShifts: any[];
+  lowMomRateVisits: any[];
   conversion: any[];
   heatmap: { data: any[]; max: number };
   dataQuality: any | null;
@@ -43,6 +44,7 @@ const EMPTY: AnalyticsData = {
   products: [],
   productThresholds: null,
   openShifts: [],
+  lowMomRateVisits: [],
   conversion: [],
   heatmap: { data: [], max: 0 },
   dataQuality: null,
@@ -87,7 +89,7 @@ const AdminDashboardClient: React.FC<{ userToken?: string }> = ({ userToken }) =
           return fallback;
         });
 
-      const [overview, timeseries, hospitals, employees, demographics, products, openShifts, conversion, heatmap, dataQuality] =
+      const [overview, timeseries, hospitals, employees, demographics, products, openShifts, lowMomRateVisits, conversion, heatmap, dataQuality] =
         await Promise.all([
           wrap(authedGet(`/api/analytics/overview?${qs}`), null),
           wrap(authedGet(`/api/analytics/moms-timeseries?${qs}&granularity=${g}`), { data: [] }),
@@ -96,6 +98,7 @@ const AdminDashboardClient: React.FC<{ userToken?: string }> = ({ userToken }) =
           wrap(authedGet(`/api/analytics/demographics?${qs}`), null),
           wrap(authedGet(`/api/analytics/products-consumption?${qs}`), { data: [] }),
           wrap(authedGet(`/api/analytics/open-shifts`), { data: [] }),
+          wrap(authedGet(`/api/analytics/low-mom-rate-visits?${qs}`), { data: [] }),
           wrap(authedGet(`/api/analytics/conversion-timeseries?${qs}&granularity=${cg}`), { data: [] }),
           wrap(authedGet(`/api/analytics/activity-heatmap?${qs}`), { data: [], max: 0 }),
           wrap(authedGet(`/api/analytics/data-quality?${qs}`), null),
@@ -110,6 +113,7 @@ const AdminDashboardClient: React.FC<{ userToken?: string }> = ({ userToken }) =
         products: products?.data || [],
         productThresholds: (products as any)?.thresholds || null,
         openShifts: openShifts?.data || [],
+        lowMomRateVisits: lowMomRateVisits?.data || [],
         conversion: conversion?.data || [],
         heatmap: { data: heatmap?.data || [], max: heatmap?.max || 0 },
         dataQuality,
@@ -247,6 +251,7 @@ const AdminDashboardClient: React.FC<{ userToken?: string }> = ({ userToken }) =
             <AttentionPanel
               openShifts={data.openShifts}
               products={data.products}
+              lowMomRateVisits={data.lowMomRateVisits}
               outOfStockThreshold={data.productThresholds?.outOfStock}
               lowStockThreshold={data.productThresholds?.lowStock}
             />
@@ -287,7 +292,9 @@ const AdminDashboardClient: React.FC<{ userToken?: string }> = ({ userToken }) =
 
         <div className="lg:col-span-2">
           <ChartCard title="جودة البيانات">
-            {loading ? <ChartSkeleton /> : <DataQualityPanel stats={data.dataQuality} />}
+            {/* Pass `range` so the drill-down inherits the range shown here
+                instead of silently falling back to the default 6-month window. */}
+            {loading ? <ChartSkeleton /> : <DataQualityPanel stats={data.dataQuality} range={range} />}
           </ChartCard>
         </div>
       </div>

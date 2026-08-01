@@ -1,8 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import VisitsTable, { type VisitRow } from '@/components/VisitsTable';
 import { shiftStatus } from '@/models/enum.constants';
 import { fenceStatusLabel } from '@/utils/geo/geofence';
+import {
+  isLowMomRateVisit,
+  visitDurationHours,
+  visitMomsPerHour,
+  type MomRateBaseline,
+} from '@/utils/analytics/visitProductivity';
 
 const coordText = (loc: any) =>
   loc && Number.isFinite(loc?.lat) && Number.isFinite(loc?.lng) ? `${loc.lat}, ${loc.lng}` : '';
@@ -10,8 +17,7 @@ const rawCoord = (loc: any) =>
   loc && Number.isFinite(loc?.lat) && Number.isFinite(loc?.lng) ? { lat: loc.lat, lng: loc.lng } : null;
 
 const VisitsPage = async () => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
+  const { userToken } = await requireServerSession();
 
   const headersList = await headers();
   const host = headersList.get('host');
@@ -21,6 +27,7 @@ const VisitsPage = async () => {
   const data = await fetch(`${process.env.NODE_ENV === "development" ? process.env.URL : `https://${host}`}/api/visit/get-visits`, {
 
     method: 'GET',
+    cache: 'no-store',
     headers: {
       authorization: `Bearer ${userToken}`,
     },
@@ -29,7 +36,15 @@ const VisitsPage = async () => {
   const visits = await data.json();
 
   if (data.status === 200) {
+    const baseline: MomRateBaseline = visits.momRateBaseline;
+
     visits.visits.map((visit: any) => {
+      // Productivity is derived here rather than stored, using the team baseline
+      // the API shipped alongside the rows.
+      const low = baseline ? isLowMomRateVisit(visit, baseline) : null;
+      const durationHours = visitDurationHours(visit);
+      const notesBy = visit.notesUpdatedBy;
+
       processedVisits.push({
         id: visit._id,
         hospitalName: visit.hospitalId.name,
@@ -38,6 +53,14 @@ const VisitsPage = async () => {
         momsCount: visit?.moms?.length || 0,
         employeeName: `${visit.createdBy.firstName} ${visit.createdBy.lastName}`,
         statusLabel: visit.status === shiftStatus.ENDED ? 'منتهية' : 'جارية',
+        durationHours,
+        momsPerHour: visitMomsPerHour(visit),
+        lowMomRate: durationHours == null ? null : low,
+        lowMomRateLabel: durationHours == null || low == null ? '' : low ? 'نعم' : 'لا',
+        baselineDays: baseline?.baselineDays,
+        notes: visit.notes ?? '',
+        notesUpdatedByName: notesBy ? `${notesBy.firstName ?? ''} ${notesBy.lastName ?? ''}`.trim() : undefined,
+        notesUpdatedAt: visit.notesUpdatedAt ?? null,
         startLoc: rawCoord(visit.startLocation),
         endLoc: rawCoord(visit.endLocation),
         hospitalLoc: rawCoord(visit.hospitalId?.location),
@@ -53,7 +76,7 @@ const VisitsPage = async () => {
   return (
     <div>
       <h1 className='text-3xl font-bold p-4 mb-6'>الزيارات</h1>
-      <VisitsTable data={processedVisits} showEmployee filename="visits.csv" />
+      <VisitsTable data={processedVisits} showEmployee filename="visits.csv" userToken={userToken} />
     </div>
   );
 };

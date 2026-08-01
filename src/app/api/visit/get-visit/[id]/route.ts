@@ -1,8 +1,9 @@
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import jwt from 'jsonwebtoken';
+import { requireAuth } from "@/utils/auth/requireAuth";
 // import { userRoles } from "@/models/enum.constants";
 import { Visit } from "@/models/Visit";
+import { getMomRateBaseline } from "@/utils/analytics/visitProductivity";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
 
@@ -10,15 +11,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   
   await initDb();
-  /***************AUTH GAURD START****************/
-  const authHeader = req.headers.get('authorization');
-  const userToken = authHeader?.split(" ")[1];
-  if (!userToken){
-    return NextResponse.json({status: 401, message: "Session has timed out. Please log in to use Mabrook System"})
-  }
-
-  const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
-  /***************AUTH GAURD END****************/
+  const auth = requireAuth(req);
+  if (auth.error) return auth.error;
+  const userPayload = auth.payload;
 
   if (!userPayload) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
@@ -29,6 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .populate('hospitalId')
   .populate('shiftId')
   .populate({path: 'createdBy', model: 'User', select: 'email firstName lastName'})
+  .populate({path: 'notesUpdatedBy', model: 'User', select: 'firstName lastName'})
 
 
   // if(userPayload.role !== userRoles.ADMIN && userPayload._id !== visit?.createdBy._id.toString()) {
@@ -39,5 +35,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({status: 404, message: "No visit found with the provided ID"})
   }
 
-  return NextResponse.json({ message: "Visit fetched successfully", visit }, { status: 200 });
+  // Derived at read time, never stored — see utils/analytics/visitProductivity.
+  const momRateBaseline = await getMomRateBaseline();
+
+  return NextResponse.json({ message: "Visit fetched successfully", visit, momRateBaseline }, { status: 200 });
 }

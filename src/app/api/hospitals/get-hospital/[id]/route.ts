@@ -1,7 +1,7 @@
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import jwt from 'jsonwebtoken';
-// import { userRoles } from "@/models/enum.constants";
+import { requireAuth } from "@/utils/auth/requireAuth";
+import { userRoles } from "@/models/enum.constants";
 import { Hospital } from "@/models/Hospital";
 import { User } from "@/models/User";
 
@@ -11,18 +11,29 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   
   await initDb();
-  /***************AUTH GAURD START****************/
-  const authHeader = req.headers.get('authorization');
-  const userToken = authHeader?.split(" ")[1];
-  if (!userToken){
-    return NextResponse.json({status: 401, message: "Session has timed out. Please log in to use Mabrook System"})
-  }
-
-  const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
-  /***************AUTH GAURD END****************/
+  const auth = requireAuth(req);
+  if (auth.error) return auth.error;
+  const userPayload = auth.payload;
 
   if (!userPayload) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
+  }
+
+  // Admins and warehouse users can open any hospital; employees only their own
+  // assignments. Checked before the findById so it costs less and doesn't leak
+  // whether the id exists. (The old check compared against `createdBy`, which no
+  // employee could ever satisfy — hospitals are created by admins.)
+  if (userPayload.role === userRoles.EMPLOYEE) {
+    const me = await User.findById(userPayload._id).select("assignedHospitals").lean();
+    const assigned = ((me as { assignedHospitals?: unknown[] } | null)?.assignedHospitals || []).map((h) =>
+      String(h),
+    );
+    if (!assigned.includes(id)) {
+      return NextResponse.json(
+        { status: 403, message: "This Action is not allowed for you" },
+        { status: 403 },
+      );
+    }
   }
 
   const hospital = await Hospital
@@ -37,10 +48,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     model: 'Product',
     select: 'name size'
   });
-
-  // if(userPayload.role !== userRoles.ADMIN && userPayload._id !== hospital?.createdBy._id.toString()) {
-  //   return NextResponse.json({status: 403, message: "You are not authorized to view this hospital"}, { status: 403 });
-  // }
 
   if(!hospital) {
     return NextResponse.json({status: 404, message: "No hospital found with the provided ID"})

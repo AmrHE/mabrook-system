@@ -1,8 +1,9 @@
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import jwt from 'jsonwebtoken';
+import { requireAuth } from "@/utils/auth/requireAuth";
 import { userRoles } from "@/models/enum.constants";
 import { User } from "@/models/User";
+import { getMomRateBaseline } from "@/utils/analytics/visitProductivity";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }>}) {
 
@@ -11,13 +12,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   await initDb();
   /***************ADMIN GAURD START****************/
-  const authHeader = req.headers.get('authorization');
-  const userToken = authHeader?.split(" ")[1];
-  if (!userToken){
-    return NextResponse.json({status: 401, message: "Session has timed out. Please log in to use Mabrook System"})
-  }
-
-  const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
+  const auth = requireAuth(req);
+  if (auth.error) return auth.error;
+  const userPayload = auth.payload;
 
   if (userPayload.role !== userRoles.ADMIN){
     return NextResponse.json({status: 403, message: "This Action is only allowed for Admins"})
@@ -32,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   .populate({
     path: "visits",
     model: "Visit",
-    select: "hospitalId moms status isActive createdAt startLocation endLocation",
+    select: "hospitalId moms status isActive createdAt startTime endTime startLocation endLocation notes notesUpdatedAt",
     populate: { path: "hospitalId", model: "Hospital", select: "name city district" },
   })
   .populate({path: "assignedHospitals", model: "Hospital", select: "name city district"})
@@ -43,5 +40,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({status: 404, message: "No user found"})
   }
 
-  return NextResponse.json({ message: "User fetched successfully", user }, { status: 200 });
+  // Same team baseline the analytics use, so this employee's visits carry the
+  // identical productivity verdict they get on /visits.
+  const momRateBaseline = await getMomRateBaseline();
+
+  return NextResponse.json({ message: "User fetched successfully", user, momRateBaseline }, { status: 200 });
 }

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/utils/auth/requireAdmin";
 import { Settings } from "@/models/Settings";
 import { getSettings } from "@/utils/settings/getSettings";
+import { invalidateMomRateBaseline } from "@/utils/analytics/visitProductivity";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,11 @@ export async function PUT(req: NextRequest) {
       ["geofenceRadiusMeters", 20, 5000, "نطاق تسجيل الحضور (متر)"],
       ["outOfStockThreshold", 0, 1000000, "حد نفاد المخزون"],
       ["lowStockThreshold", 0, 1000000, "حد المخزون المنخفض"],
+      // Max ratio is 90, not 100: at 100% every below-average visit flags,
+      // which is roughly half the pool by construction.
+      ["lowMomRateRatioPercent", 10, 90, "نسبة الإنتاجية المنخفضة"],
+      ["lowMomRateMinVisitMinutes", 15, 480, "أقل مدة زيارة للتقييم"],
+      ["lowMomRateBaselineDays", 7, 365, "فترة حساب متوسط الفريق"],
     ];
     for (const [key, min, max, label] of numeric) {
       if (body[key] !== undefined) {
@@ -92,6 +98,11 @@ export async function PUT(req: NextRequest) {
       { $set: set },
       { upsert: true, new: true, runValidators: true },
     ).lean();
+
+    // The productivity baseline memoises an aggregation keyed on these settings;
+    // drop it so an admin's edit takes effect on the very next request rather
+    // than after the TTL.
+    invalidateMomRateBaseline();
 
     return NextResponse.json({ settings: updated }, { status: 200 });
   } catch (err: any) {
