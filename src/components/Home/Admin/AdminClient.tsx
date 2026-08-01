@@ -28,6 +28,7 @@ interface AnalyticsData {
   demographics: any | null;
   products: any[];
   productThresholds: { outOfStock: number; lowStock: number } | null;
+  hospitalStockAlerts: any[];
   openShifts: any[];
   lowMomRateVisits: any[];
   conversion: any[];
@@ -43,6 +44,7 @@ const EMPTY: AnalyticsData = {
   demographics: null,
   products: [],
   productThresholds: null,
+  hospitalStockAlerts: [],
   openShifts: [],
   lowMomRateVisits: [],
   conversion: [],
@@ -89,7 +91,7 @@ const AdminDashboardClient: React.FC<{ userToken?: string }> = ({ userToken }) =
           return fallback;
         });
 
-      const [overview, timeseries, hospitals, employees, demographics, products, openShifts, lowMomRateVisits, conversion, heatmap, dataQuality] =
+      const [overview, timeseries, hospitals, employees, demographics, products, stockAlerts, openShifts, lowMomRateVisits, conversion, heatmap, dataQuality] =
         await Promise.all([
           wrap(authedGet(`/api/analytics/overview?${qs}`), null),
           wrap(authedGet(`/api/analytics/moms-timeseries?${qs}&granularity=${g}`), { data: [] }),
@@ -97,6 +99,8 @@ const AdminDashboardClient: React.FC<{ userToken?: string }> = ({ userToken }) =
           wrap(authedGet(`/api/analytics/employees-report?${qs}`), { data: [] }),
           wrap(authedGet(`/api/analytics/demographics?${qs}`), null),
           wrap(authedGet(`/api/analytics/products-consumption?${qs}`), { data: [] }),
+          // Current snapshot, not range-bound — stock levels are a "right now" fact.
+          wrap(authedGet(`/api/analytics/hospital-stock-alerts`), { data: [] }),
           wrap(authedGet(`/api/analytics/open-shifts`), { data: [] }),
           wrap(authedGet(`/api/analytics/low-mom-rate-visits?${qs}`), { data: [] }),
           wrap(authedGet(`/api/analytics/conversion-timeseries?${qs}&granularity=${cg}`), { data: [] }),
@@ -111,7 +115,9 @@ const AdminDashboardClient: React.FC<{ userToken?: string }> = ({ userToken }) =
         employees: employees?.data || [],
         demographics,
         products: products?.data || [],
-        productThresholds: (products as any)?.thresholds || null,
+        // Both endpoints read the same Settings doc; either one can supply them.
+        productThresholds: (products as any)?.thresholds || (stockAlerts as any)?.thresholds || null,
+        hospitalStockAlerts: stockAlerts?.data || [],
         openShifts: openShifts?.data || [],
         lowMomRateVisits: lowMomRateVisits?.data || [],
         conversion: conversion?.data || [],
@@ -252,6 +258,7 @@ const AdminDashboardClient: React.FC<{ userToken?: string }> = ({ userToken }) =
               openShifts={data.openShifts}
               products={data.products}
               lowMomRateVisits={data.lowMomRateVisits}
+              hospitalStockAlerts={data.hospitalStockAlerts}
               outOfStockThreshold={data.productThresholds?.outOfStock}
               lowStockThreshold={data.productThresholds?.lowStock}
             />

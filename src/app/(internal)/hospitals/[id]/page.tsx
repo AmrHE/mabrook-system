@@ -118,7 +118,7 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
 
       </TabsContent>
       <TabsContent value="productDetails">
-        <HospitalStockDetails userToken={userToken} productStocks={h?.productStocks} />
+        <HospitalStockDetails userToken={userToken} productStocks={h?.productStocks} hospitalName={h?.name} />
       </TabsContent>
       {isAdmin && (
         <TabsContent value="editHospital">
