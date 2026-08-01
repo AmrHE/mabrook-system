@@ -1,35 +1,52 @@
 // app/api/logout/route.ts
 import { initDb } from "@/lib/mongoose";
-import { shiftStatus, shiftCloseReason } from "@/models/enum.constants";
-import { Shift } from "@/models/Shift";
-import { User } from "@/models/User";
-import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { AuthSession } from "@/models/AuthSession";
+import { revokeFamily } from "@/utils/auth/session.server";
+import {
+  ACCESS_COOKIE,
+  APP_STATE_COOKIES,
+  LEGACY_COOKIES,
+  REFRESH_COOKIE,
+  clearCookieOptions,
+  clearLegacyCookieOptions,
+  hashToken,
+  verifyAccessToken,
+} from "@/utils/auth/tokens";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST() {
+/**
+ * Log out: revoke the refresh family and drain the cookie jar.
+ *
+ * Deliberately does NOT end the employee's shift anymore. Logging out is not
+ * clocking out — an accidental logout used to silently truncate someone's paid
+ * hours. The shift stays open, the employee resumes it with "استئناف الدوام",
+ * and `cron/close-stale-shifts` remains the safety net for a genuinely
+ * abandoned shift.
+ */
+export async function POST(req: NextRequest) {
   await initDb();
 
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("userId")?.value;
+  const raw = req.cookies.get(REFRESH_COOKIE)?.value;
 
-  if (userId) {
-    // Close ALL open shifts for the user (not just one) on logout.
-    await Shift.updateMany(
-      { userId, status: shiftStatus.IN_PROGRESS },
-      { $set: { status: shiftStatus.ENDED, endTime: new Date(), closeReason: shiftCloseReason.LOGOUT } },
-    );
+  // Identify from a VERIFIED token, never from a cookie the client can write.
+  // The previous version trusted a plain `userId` cookie, so a forged one let
+  // anybody force-close another employee's shift.
+  const payload =
+    verifyAccessToken(req.cookies.get(ACCESS_COOKIE)?.value) ??
+    verifyAccessToken(req.headers.get("authorization")?.split(" ")[1]);
 
-    const user = await User.findById(userId);
-    if (user) {
-      user.isOnShift = false;
-      await user.save();
-    }
+  if (raw) {
+    const row = await AuthSession.findOne({ tokenHash: hashToken(raw) });
+    if (row) await revokeFamily(row.familyId, "LOGOUT");
+  } else if (payload?.sid) {
+    const row = await AuthSession.findById(payload.sid);
+    if (row) await revokeFamily(row.familyId, "LOGOUT");
   }
 
-  cookieStore.delete("access_token");
-  cookieStore.delete("role");
-  cookieStore.delete("email");
-  cookieStore.delete("userId");
-
-  return NextResponse.json({ success: true });
+  const res = NextResponse.json({ success: true });
+  res.cookies.set(ACCESS_COOKIE, "", clearCookieOptions);
+  res.cookies.set(REFRESH_COOKIE, "", clearCookieOptions);
+  for (const name of LEGACY_COOKIES) res.cookies.set(name, "", clearLegacyCookieOptions);
+  for (const name of APP_STATE_COOKIES) res.cookies.set(name, "", clearLegacyCookieOptions);
+  return res;
 }

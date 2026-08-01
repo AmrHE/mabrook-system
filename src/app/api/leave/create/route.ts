@@ -19,7 +19,7 @@ const PERMIT_TYPES = new Set<string>([leaveType.DELAY_PERMIT, leaveType.EARLY_LE
 const SINGLE_DAY_TYPES = new Set<string>([leaveType.DELAY_PERMIT, leaveType.EARLY_LEAVE, leaveType.CASUAL]);
 
 const MIN_PERMIT_MINUTES = 15;
-const MAX_PERMIT_MINUTES = 240;
+const MAX_PERMIT_MINUTES = 120;
 const MAX_VACATION_DAYS = 60;
 
 /**

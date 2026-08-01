@@ -1,6 +1,6 @@
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import jwt from 'jsonwebtoken';
+import { requireAuth } from "@/utils/auth/requireAuth";
 import { User } from "@/models/User";
 
 export async function PATCH(req: NextRequest) {
@@ -9,15 +9,9 @@ export async function PATCH(req: NextRequest) {
   const { firstName, lastName, phoneNumber } = reqBody;
 
   await initDb();
-  /***************AUTH GAURD START****************/
-  const authHeader = req.headers.get('authorization');
-  const userToken = authHeader?.split(" ")[1];
-  if (!userToken){
-    return NextResponse.json({status: 401, message: "Session has timed out. Please log in to use Mabrook System"})
-  }
-
-  const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
-  /***************AUTH GAURD END****************/
+  const auth = requireAuth(req);
+  if (auth.error) return auth.error;
+  const userPayload = auth.payload;
 
   if (!userPayload) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})

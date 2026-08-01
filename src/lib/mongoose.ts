@@ -8,6 +8,7 @@ import mongoose from 'mongoose'
 
 // Import all your models here - this ensures they are registered
 import '@/models/User'
+import '@/models/AuthSession'
 import '@/models/Visit'
 import '@/models/Hospital'
 import '@/models/Shift'

@@ -10,12 +10,22 @@ export enum shiftStatus {
   ENDED = "ENDED"
 }
 
+/**
+ * Why a shift SESSION ended. Since shifts collapse to one document per Riyadh
+ * day, this lives on each `segments[]` entry; the copy on the shift itself is
+ * the LAST segment's, i.e. "how did this day finally end".
+ *
+ * LOGOUT and DUPLICATE are retired for new writes — logging out no longer ends
+ * a shift, and the {userId, dayKey} unique index makes duplicates unreachable —
+ * but they stay here (and in the Arabic label map) for historical rows.
+ */
 export enum shiftCloseReason {
   MANUAL = "MANUAL",             // employee pressed "end"
-  LOGOUT = "LOGOUT",             // closed during logout
-  MAX_DURATION = "MAX_DURATION", // auto: now - startTime >= maxShiftHours
+  LOGOUT = "LOGOUT",             // retired: closed during logout
+  MAX_DURATION = "MAX_DURATION", // auto: worked time >= maxShiftHours
   INACTIVITY = "INACTIVITY",     // auto: now - lastActivity >= inactivityMinutes
-  DUPLICATE = "DUPLICATE",       // extra concurrent open shift collapsed
+  DUPLICATE = "DUPLICATE",       // retired: extra concurrent open shift collapsed
+  DAY_ROLLOVER = "DAY_ROLLOVER", // auto: still open when a new Riyadh day's shift started
 }
 
 // Geofence classification of a shift/visit check-in relative to its hospital.

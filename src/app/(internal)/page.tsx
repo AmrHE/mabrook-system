@@ -1,24 +1,21 @@
 import AdminDashboard from "@/components/Home/Admin";
 import EmployeeDashboard from "@/components/Home/Employee";
 import { userRoles } from "@/models/enum.constants";
-import { cookies } from "next/headers";
+import { requireServerSession } from "@/utils/auth/serverSession.server";
+import { getCurrentState } from "@/utils/shift/currentState";
+
+// The shift/visit state is read live from Mongo on every load; caching it would
+// reintroduce exactly the staleness the cookies used to cause.
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
-  const shiftStatus = cookieStore.get('shiftStatus')?.value;
-  const visitStatus = cookieStore.get('visitStatus')?.value;
-  const currentVisit = cookieStore.get('currentVisit')?.value;
-  const userRole = cookieStore.get('role')?.value;
+  const { userToken, payload } = await requireServerSession();
 
-  return (
-    <>
-    {userRole === userRoles.ADMIN ? (
-      <AdminDashboard />
-    ) : 
-    (
-      <EmployeeDashboard userToken={userToken} currentShift={shiftStatus} visitStatus={visitStatus} currentVisit={currentVisit} />
-    )}
-    </>
-  );
+  if (payload.role === userRoles.ADMIN) {
+    return <AdminDashboard />;
+  }
+
+  const state = await getCurrentState(payload._id);
+
+  return <EmployeeDashboard userToken={userToken} initialState={state} />;
 }

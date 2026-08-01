@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import Link from 'next/link';
 import { columns, type LeaveRow } from './columns';
 import { Button } from '@/components/ui/button';
@@ -27,9 +28,9 @@ const fmtDate = (d: any) =>
  * sees only their own — the API does that scoping, this page just renders it.
  */
 const LeavesPage = async () => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
-  const role = cookieStore.get('role')?.value;
+  // aliased: `payload` below is the API response body, not the session
+  const { userToken, payload: session } = await requireServerSession();
+  const role = session.role;
   const isAdmin = role === userRoles.ADMIN;
   const headersList = await headers();
   const host = headersList.get('host');

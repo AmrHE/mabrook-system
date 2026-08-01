@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import React from 'react'
 import {
   Tabs,
@@ -29,9 +30,8 @@ return res.json();
 }
 
 const SingleMomPage = async ({ params }: { params: Promise<{ id: string }> }) => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
-  const userRole = cookieStore.get('role')?.value;
+  const { userToken, payload } = await requireServerSession();
+  const userRole = payload.role;
 
   const { id } = await params;
   const mom = await getMomData(id, userToken);

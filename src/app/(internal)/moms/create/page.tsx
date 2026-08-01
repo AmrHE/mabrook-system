@@ -1,6 +1,6 @@
 import React from 'react'
 import AddNewMomForm from '@/components/AddNewMomForm'
-import { cookies } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import { userRoles } from '@/models/enum.constants';
 
 interface PageProps {
@@ -8,9 +8,8 @@ interface PageProps {
 }
 
 const CreateNewMomPage = async ({ searchParams }: PageProps) => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
-  const isAdmin = cookieStore.get('role')?.value === userRoles.ADMIN;
+  const { userToken, payload } = await requireServerSession();
+  const isAdmin = payload.role === userRoles.ADMIN;
 
   // Await the searchParams promise
   const resolvedSearchParams = await searchParams;

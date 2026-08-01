@@ -4,22 +4,16 @@ import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/utils/auth/requireAuth";
 import { parseRange, TIMEZONE } from "@/utils/date/range";
-import { shiftStatus, shiftCloseReason, userRoles } from "@/models/enum.constants";
+import { shiftStatus, userRoles } from "@/models/enum.constants";
 import { Shift } from "@/models/Shift";
 import { excludeUsers, getExcludedUserIds } from "@/utils/analytics/excludedUsers";
+import { closeReasonLabel, formatSessionSpan } from "@/utils/shift/labels";
+import { riyadhDayKey } from "@/utils/date/range";
 
 export const dynamic = "force-dynamic";
 
 const fmt = (d: any) =>
   d ? new Date(d).toLocaleString("en-SA", { timeZone: TIMEZONE, dateStyle: "medium", timeStyle: "short" }) : "";
-
-const CLOSE_REASON_AR: Record<string, string> = {
-  [shiftCloseReason.MANUAL]: "يدوي",
-  [shiftCloseReason.LOGOUT]: "تسجيل خروج",
-  [shiftCloseReason.MAX_DURATION]: "تجاوز المدة",
-  [shiftCloseReason.INACTIVITY]: "خمول",
-  [shiftCloseReason.DUPLICATE]: "مكرر",
-};
 
 const coord = (loc: any) =>
   loc && Number.isFinite(loc.lat) && Number.isFinite(loc.lng) ? `${loc.lat}, ${loc.lng}` : "";
@@ -67,13 +61,37 @@ export async function GET(req: NextRequest) {
           },
           email: { $ifNull: ["$employee.email", ""] },
           status: 1,
+          dayKey: {
+            $ifNull: [
+              "$dayKey",
+              { $dateToString: { date: "$startTime", format: "%Y-%m-%d", timezone: TIMEZONE } },
+            ],
+          },
           startTime: 1,
           endTime: 1,
           lastActivityAt: 1,
-          durationHours: {
+          segments: { $ifNull: ["$segments", []] },
+          sessionsCount: { $max: [1, { $size: { $ifNull: ["$segments", []] } }] },
+          // Summed sessions, not the day's span. A day worked 09:00-12:00 and
+          // 16:00-19:00 is 6 hours, not the 10 the span would report.
+          workedMinutes: {
             $cond: [
-              { $and: [{ $eq: ["$status", shiftStatus.ENDED] }, { $ne: ["$endTime", null] }] },
-              { $round: [{ $divide: [{ $subtract: ["$endTime", "$startTime"] }, 3600000] }, 1] },
+              { $gt: [{ $ifNull: ["$workedMinutes", 0] }, 0] },
+              "$workedMinutes",
+              {
+                $cond: [
+                  { $and: [{ $eq: ["$status", shiftStatus.ENDED] }, { $ne: ["$endTime", null] }] },
+                  { $divide: [{ $subtract: ["$endTime", "$startTime"] }, 60000] },
+                  null,
+                ],
+              },
+            ],
+          },
+          // Wall-clock span minus worked time = the unpaid gap between sessions.
+          spanMinutes: {
+            $cond: [
+              { $ne: ["$endTime", null] },
+              { $divide: [{ $subtract: ["$endTime", "$startTime"] }, 60000] },
               null,
             ],
           },
@@ -82,6 +100,15 @@ export async function GET(req: NextRequest) {
           startLocation: 1,
           endLocation: 1,
           autoClosed: { $ifNull: ["$autoClosed", false] },
+          autoClosedSessions: {
+            $size: {
+              $filter: {
+                input: { $ifNull: ["$segments", []] },
+                as: "s",
+                cond: { $eq: ["$$s.autoClosed", true] },
+              },
+            },
+          },
           closeReason: 1,
           forgotToEnd: { $cond: [{ $eq: ["$status", shiftStatus.IN_PROGRESS] }, "نعم", "لا"] },
         },
@@ -89,23 +116,51 @@ export async function GET(req: NextRequest) {
       { $sort: { startTime: -1 } },
     ]);
 
-    const rows = (agg as any[]).map((r) => ({
-      employee: r.employee || "غير محدد",
-      email: r.email,
-      startTime: fmt(r.startTime),
-      endTime: fmt(r.endTime),
-      durationHours: r.durationHours ?? "",
-      visitsCount: r.visitsCount ?? 0,
-      momsCount: r.momsCount ?? 0,
-      startLocation: coord(r.startLocation),
-      endLocation: coord(r.endLocation),
-      startLoc: rawCoord(r.startLocation),
-      endLoc: rawCoord(r.endLocation),
-      autoClosed: r.autoClosed ? "نعم" : "لا",
-      closeReason: r.closeReason ? CLOSE_REASON_AR[r.closeReason] ?? r.closeReason : "",
-      lastActivityAt: fmt(r.lastActivityAt),
-      forgotToEnd: r.forgotToEnd,
-    }));
+    const todayKey = riyadhDayKey(new Date());
+
+    const rows = (agg as any[]).map((r) => {
+      const worked = r.workedMinutes;
+      const breakMinutes =
+        r.spanMinutes != null && worked != null ? Math.max(0, Math.round(r.spanMinutes - worked)) : "";
+
+      return {
+        employee: r.employee || "غير محدد",
+        email: r.email,
+        dayKey: r.dayKey ?? "",
+        startTime: fmt(r.startTime),
+        endTime: fmt(r.endTime),
+        durationHours: worked != null ? Math.round((worked / 60) * 10) / 10 : "",
+        sessionsCount: r.sessionsCount ?? 1,
+        breakMinutes,
+        // Flattened so the sessions survive CSV export, which is what admins
+        // actually consume; the UI renders the structured `sessions` instead.
+        sessionsText: (r.segments ?? [])
+          .map((s: any) => formatSessionSpan(s.startTime, s.endTime))
+          .join(" | "),
+        sessions: (r.segments ?? []).map((s: any) => ({
+          startTime: s.startTime,
+          endTime: s.endTime ?? null,
+          autoClosed: !!s.autoClosed,
+          closeReason: closeReasonLabel(s.closeReason),
+          startLoc: rawCoord(s.startLocation),
+          endLoc: rawCoord(s.endLocation),
+        })),
+        visitsCount: r.visitsCount ?? 0,
+        momsCount: r.momsCount ?? 0,
+        startLocation: coord(r.startLocation),
+        endLocation: coord(r.endLocation),
+        startLoc: rawCoord(r.startLocation),
+        endLoc: rawCoord(r.endLocation),
+        autoClosed: r.autoClosed ? "نعم" : "لا",
+        autoClosedSessions: r.autoClosedSessions ?? 0,
+        closeReason: closeReasonLabel(r.closeReason),
+        lastActivityAt: fmt(r.lastActivityAt),
+        // Still open is normal during working hours — what deserves attention is
+        // a day left open after it ended.
+        forgotToEnd: r.forgotToEnd,
+        staleOpen: r.status === shiftStatus.IN_PROGRESS && r.dayKey < todayKey ? "نعم" : "لا",
+      };
+    });
 
     return NextResponse.json({ rows }, { status: 200 });
   } catch (err: any) {

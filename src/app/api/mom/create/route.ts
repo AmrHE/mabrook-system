@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import mongoose from 'mongoose';
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { requireAuth } from "@/utils/auth/requireAuth";
 import { initDb } from '../../../../lib/mongoose';
 import { Mom } from '@/models/Mom';
 import { Visit } from '@/models/Visit';
@@ -13,19 +13,13 @@ import { resolveApps } from '@/utils/app/apps.server';
 import { adjustHospitalStock } from '@/utils/stock/recompute';
 
 export async function POST(req: NextRequest) {
-  /***************Auth GAURD START****************/
-  const authHeader = req.headers.get('authorization');
-  const userToken = authHeader?.split(' ')[1];
-  if (!userToken) {
-    return NextResponse.json({status: 401, message: 'Session has timed out. Please log in to use Mabrook System'});
-  }
-
-  const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string };
+  const auth = requireAuth(req);
+  if (auth.error) return auth.error;
+  const userPayload = auth.payload;
 
   if (!userPayload._id) {
     return NextResponse.json({status: 400, message: 'Cannot identify the user Please re-login and try again'});
   }
-  /***************Auth GAURD END****************/
 
   const { name, age, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId, phoneNumber, allowFutureCom, signature, installedApp, boxId } = await req.json();
   if ( !name ) {

@@ -1,10 +1,9 @@
 import React from 'react'
-import { cookies } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import AdminDashboardClient from './AdminClient';
 
 const AdminDashboard = async () => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
+  const { userToken } = await requireServerSession();
 
   return <AdminDashboardClient userToken={userToken} />;
 };

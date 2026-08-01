@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import React from 'react'
 import SurveyForm from './Survey';
 
@@ -18,8 +19,7 @@ async function getMom(id: string, userToken: any) {
 }
 
 const ProductSurveyForm = async ({ id }: { id: string }) => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
+  const { userToken } = await requireServerSession();
 
   const data = await getMom(id, userToken);
   // Only the box that was actually given to this mom (set at creation).

@@ -18,7 +18,7 @@ const METRICS = [
   { key: "visits", label: "الزيارات" },
   { key: "totalHours", label: "الساعات" },
   { key: "workingDays", label: "أيام العمل" },
-  { key: "avgMomsPerShift", label: "معدل/وردية" },
+  { key: "avgMomsPerDay", label: "معدل/يوم" },
   { key: "attendanceRate", label: "% الحضور" },
   { key: "punctualityRate", label: "% الالتزام بالوقت" },
 ];

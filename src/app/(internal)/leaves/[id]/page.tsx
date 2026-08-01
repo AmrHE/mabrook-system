@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import LeaveStatusBadge, { LeavePayModeBadge } from '@/components/LeaveStatusBadge';
@@ -42,10 +43,10 @@ const Row = ({ label, children }: { label: string; children: React.ReactNode }) 
 );
 
 const SingleLeavePage = async ({ params }: { params: Promise<{ id: string }> }) => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
-  const userRole = cookieStore.get('role')?.value;
-  const userId = cookieStore.get('userId')?.value;
+  // aliased: `payload` below is the API response body, not the session
+  const { userToken, payload: session } = await requireServerSession();
+  const userRole = session.role;
+  const userId = session._id;
 
   const { id } = await params;
   const payload = await getLeaveData(id, userToken);

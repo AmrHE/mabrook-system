@@ -83,14 +83,18 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
     });
     const data = await res.json();
 
-    if (res.status === 201) {
+    if (res.status === 201 && data.visit?._id) {
       toast.success('تمت إضافة الزيارة بنجاح!');
       warnOnFence(data.visit?.startFenceStatus, data.visit?.startDistanceMeters, 'visit');
       router.push(`/visits/${data.visit._id}`)
+    } else if (res.status === 409 && data.visit?._id) {
+      // An open visit already exists — take the employee to it rather than
+      // leaving them to create a duplicate.
+      toast.info(data.message || 'لديك زيارة مفتوحة بالفعل.');
+      router.push(`/visits/${data.visit._id}`)
     } else {
-      toast.error('حدث خطأ ما أثناء إضافة الزيارة. الرجاء المحاولة مرة أخرى.');
+      toast.error(data.message || 'حدث خطأ ما أثناء إضافة الزيارة. الرجاء المحاولة مرة أخرى.');
       setIsLoading(false)
-      toast.error(data.message);
     }
 
   }

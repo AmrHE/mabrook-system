@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import { columns } from "./columns";
 import FilterableTable from '@/components/FilterableTable';
 import { stockStatus } from '@/utils/stock/thresholds';
@@ -13,8 +14,7 @@ type Product = {
 }
 
 const ProductsPage = async () => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
+  const { userToken } = await requireServerSession();
   const headersList = await headers();
   const host = headersList.get('host');
 

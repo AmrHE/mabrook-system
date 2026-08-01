@@ -9,6 +9,7 @@ import DateRangeFilter, { type ResolvedRange } from "@/components/DateRangeFilte
 import ExportButton from "@/components/ExportButton";
 import FacetFilterBar, { applyFacetFilters, type FacetColumn, type FacetSelection } from "@/components/FacetFilterBar";
 import LocationModal from "@/components/LocationModal";
+import SessionsModal from "@/components/SessionsModal";
 import type { CsvColumn } from "@/utils/export/toCsv";
 import { userRoles } from "@/models/enum.constants";
 
@@ -21,12 +22,22 @@ interface ShiftColumn {
   adminOnly?: boolean;
 }
 
+// One row per employee per day. "أول دخول" / "آخر خروج" bracket the day, and
+// "ساعات العمل" is the sum of its sessions — so the break between a check-out
+// and the next check-in is visible in "الاستراحة" but never paid.
 const COLUMNS: ShiftColumn[] = [
   { key: "employee", header: "الموظف", adminOnly: true },
   { key: "email", header: "البريد", adminOnly: true },
-  { key: "startTime", header: "البداية" },
-  { key: "endTime", header: "النهاية" },
-  { key: "durationHours", header: "المدة (ساعات)" },
+  { key: "dayKey", header: "التاريخ" },
+  { key: "startTime", header: "أول دخول" },
+  { key: "endTime", header: "آخر خروج" },
+  { key: "durationHours", header: "ساعات العمل" },
+  {
+    key: "sessionsCount",
+    header: "الجلسات",
+    cell: (r) => <SessionsModal sessions={r.sessions} count={r.sessionsCount} />,
+  },
+  { key: "breakMinutes", header: "الاستراحة (د)" },
   { key: "visitsCount", header: "الزيارات" },
   { key: "momsCount", header: "الأمهات" },
   {
@@ -40,14 +51,22 @@ const COLUMNS: ShiftColumn[] = [
   },
   { key: "autoClosed", header: "إغلاق تلقائي" },
   { key: "closeReason", header: "سبب الإغلاق" },
-  { key: "forgotToEnd", header: "لم يُغلق" },
+  { key: "staleOpen", header: "متروك مفتوح" },
+];
+
+/** Flat sessions text, so the CSV keeps the detail the modal shows. */
+const CSV_COLUMNS: CsvColumn<any>[] = [
+  ...(COLUMNS.filter((c) => c.key !== "sessionsCount") as CsvColumn<any>[]),
+  { key: "sessionsCount", header: "عدد الجلسات" },
+  { key: "sessionsText", header: "تفاصيل الجلسات" },
 ];
 
 const FACETS: (FacetColumn & { adminOnly?: boolean })[] = [
   { key: "employee", label: "الموظف", adminOnly: true },
+  { key: "sessionsCount", label: "عدد الجلسات" },
   { key: "autoClosed", label: "إغلاق تلقائي" },
   { key: "closeReason", label: "سبب الإغلاق" },
-  { key: "forgotToEnd", label: "لم يُغلق" },
+  { key: "staleOpen", label: "متروك مفتوح" },
 ];
 
 export default function ShiftsClient({ userToken, userRole }: { userToken?: string; userRole?: string }) {
@@ -104,7 +123,7 @@ export default function ShiftsClient({ userToken, userRole }: { userToken?: stri
   return (
     <div>
       <div className="flex md:items-center flex-col md:flex-row justify-between mb-6 gap-4">
-        <h1 className="font-bold text-3xl">الورديات</h1>
+        <h1 className="font-bold text-3xl">أيام الدوام</h1>
         <DateRangeFilter defaultPreset="6months" onChange={setRange} />
       </div>
 
@@ -122,7 +141,11 @@ export default function ShiftsClient({ userToken, userRole }: { userToken?: stri
         <p className="text-sm text-muted-foreground">
           {busy ? "جارٍ التحميل..." : `${displayedRows.length} من ${rows.length} صف`}
         </p>
-        <ExportButton rows={displayedRows} columns={columns as CsvColumn<any>[]} filename="shifts.csv" />
+        <ExportButton
+          rows={displayedRows}
+          columns={CSV_COLUMNS.filter((c) => isAdmin || !COLUMNS.find((x) => x.key === c.key)?.adminOnly)}
+          filename="shifts.csv"
+        />
       </div>
 
       {error ? (

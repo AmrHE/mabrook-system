@@ -1,13 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { initDb } from "@/lib/mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import jwt from 'jsonwebtoken';
+import { requireAuth } from "@/utils/auth/requireAuth";
 import { Shift } from "@/models/Shift";
-import { cookies } from "next/headers";
-import { shiftStatus } from "@/models/enum.constants";
+import { shiftStatus, shiftCloseReason } from "@/models/enum.constants";
 import { User } from "@/models/User";
 import { Hospital } from "@/models/Hospital";
 import { getSettings } from "@/utils/settings/getSettings";
 import { evaluateFence, type FenceResult, type LatLng } from "@/utils/geo/geofence";
+import { riyadhDayKey } from "@/utils/date/range";
+import { buildSegment, segmentMinutes } from "@/utils/shift/rollup";
+import { effectiveActivityMs, loadActivitySignals } from "@/utils/shift/lastActivity";
 
 /** Only keep a coordinate pair when both values are finite numbers. */
 function sanitizeLocation(loc: unknown): { lat: number; lng: number } | undefined {
@@ -31,20 +34,78 @@ async function computeFence(loc: LatLng | undefined, hospitalId: string | undefi
   return evaluateFence(loc, hospital?.location, settings.geofenceRadiusMeters);
 }
 
-export async function POST(req: NextRequest) {
+/**
+ * Close any shift left open from an EARLIER Riyadh day.
+ *
+ * Without this, an employee who forgot to check out at 23:30 would hold two
+ * open shifts the next morning — the unique index is per day, so it permits it —
+ * breaking the "at most one open shift" invariant that getCurrentShift,
+ * endShift, isOnShift and the data-quality panel all rely on.
+ *
+ * The close instant is the session's effective last activity, so an abandoned
+ * night never bills idle hours.
+ */
+async function closeStaleDays(userId: string, todayKey: string, now: Date): Promise<void> {
+  const stale: any[] = await Shift.find({
+    userId,
+    status: shiftStatus.IN_PROGRESS,
+    $or: [{ dayKey: { $ne: todayKey } }, { dayKey: { $exists: false } }],
+  });
+  if (!stale.length) return;
 
-    await initDb();
+  const { visitMax, momMax } = await loadActivitySignals(stale.map((s) => s._id));
+  const nowMs = now.getTime();
 
-  /***************AUTH GAURD START****************/
-  const authHeader = req.headers.get('authorization');
-  const userToken = authHeader?.split(" ")[1];
-  if (!userToken){
-    return NextResponse.json({status: 401, message: "Session has timed out. Please log in to use Mabrook System"})
+  for (const shift of stale) {
+    const segments = shift.segments ?? [];
+    const openIndex = segments.findIndex((s: any) => !s.endTime);
+    const openStart = openIndex >= 0 ? segments[openIndex].startTime : shift.startTime;
+    const sid = String(shift._id);
+
+    const endTime = new Date(
+      effectiveActivityMs({
+        openStartMs: new Date(openStart).getTime(),
+        lastActivityAt: shift.lastActivityAt,
+        visitMax: visitMax.get(sid),
+        momMax: momMax.get(sid),
+        nowMs,
+      }),
+    );
+
+    if (openIndex >= 0) {
+      segments[openIndex].endTime = endTime;
+      segments[openIndex].autoClosed = true;
+      segments[openIndex].closeReason = shiftCloseReason.DAY_ROLLOVER;
+      shift.workedMinutes = (shift.workedMinutes ?? 0) + segmentMinutes(segments[openIndex]);
+    }
+
+    shift.status = shiftStatus.ENDED;
+    shift.endTime = endTime;
+    shift.autoClosed = true;
+    shift.closeReason = shiftCloseReason.DAY_ROLLOVER;
+    shift.currentSegmentStartedAt = undefined;
+    await shift.save();
   }
+}
 
-  const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
-  /***************AUTH GAURD END****************/
+/**
+ * Start — or resume — today's shift.
+ *
+ * There is exactly ONE shift document per employee per Riyadh day. Pressing
+ * "start" while today's shift is open returns it; pressing it after checking
+ * out appends a new session to the same document. That is what makes an
+ * interrupted day (browser closed, phone died, cron auto-close) recoverable
+ * without fragmenting the record.
+ *
+ * Written as a compare-and-swap loop rather than read-then-write, so two tabs
+ * pressing the button at once cannot produce two shifts.
+ */
+export async function POST(req: NextRequest) {
+  await initDb();
 
+  const auth = requireAuth(req);
+  if (auth.error) return auth.error;
+  const userPayload = auth.payload;
 
   if (!userPayload._id) {
     return NextResponse.json({status: 400, message: "Cannot identify the user Please re-login and try again"})
@@ -55,73 +116,144 @@ export async function POST(req: NextRequest) {
   const startLocation = sanitizeLocation(body?.location);
   const hospitalId = typeof body?.hospitalId === "string" ? body.hospitalId : undefined;
 
-  const cookieStore = await cookies();
   const user = await User.findById(userPayload._id);
   if (!user) {
     return NextResponse.json({ status: 404, message: "User not found" });
   }
 
-  // Idempotent: if the employee already has an open shift, return it instead of
-  // creating a duplicate (a primary cause of the "many open shifts" pile-up).
-  const existing = await Shift.findOne({ userId: userPayload._id, status: shiftStatus.IN_PROGRESS });
-  if (existing) {
-    if (!user.isOnShift) {
-      user.isOnShift = true;
-      await user.save();
-    }
-    // Backfill check-in details on the already-open shift if they're missing.
-    let changed = false;
-    if (startLocation && !existing.startLocation?.lat) {
-      existing.startLocation = startLocation;
-      changed = true;
-    }
-    if (hospitalId && !existing.hospitalId) {
-      existing.hospitalId = hospitalId;
-      changed = true;
-    }
-    const effectiveHospitalId = existing.hospitalId ? String(existing.hospitalId) : hospitalId;
-    if (!existing.startFenceStatus && effectiveHospitalId) {
-      const fence = await computeFence(existing.startLocation, effectiveHospitalId);
-      if (fence) {
-        existing.startFenceStatus = fence.status;
-        existing.startDistanceMeters = fence.distanceMeters ?? undefined;
-        changed = true;
-      }
-    }
-    if (changed) await existing.save();
-    cookieStore.set('shiftStatus', shiftStatus.IN_PROGRESS);
-    return NextResponse.json({ message: "Shift already in progress", shift: existing }, { status: 200 });
-  }
+  const now = new Date();
+  const todayKey = riyadhDayKey(now);
+
+  await closeStaleDays(userPayload._id, todayKey, now);
 
   const fence = await computeFence(startLocation, hospitalId);
-  const startTime = new Date();
-  let newShift;
-  try {
-    newShift = await Shift.create({
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    // (1) Today's shift is already running — idempotent, plus the backfill of
+    //     check-in details that older clients omitted.
+    const running: any = await Shift.findOne({
       userId: userPayload._id,
-      startTime,
+      dayKey: todayKey,
       status: shiftStatus.IN_PROGRESS,
-      lastActivityAt: startTime,
+    });
+    if (running) {
+      const segments = running.segments ?? [];
+      const open = segments.find((s: any) => !s.endTime);
+      let changed = false;
+
+      if (open) {
+        if (startLocation && !open.startLocation?.lat) {
+          open.startLocation = startLocation;
+          if (!running.startLocation?.lat) running.startLocation = startLocation;
+          changed = true;
+        }
+        if (hospitalId && !open.hospitalId) {
+          open.hospitalId = hospitalId;
+          if (!running.hospitalId) running.hospitalId = hospitalId;
+          changed = true;
+        }
+        if (!open.startFenceStatus && fence) {
+          open.startFenceStatus = fence.status;
+          open.startDistanceMeters = fence.distanceMeters ?? undefined;
+          if (!running.startFenceStatus) {
+            running.startFenceStatus = fence.status;
+            running.startDistanceMeters = fence.distanceMeters ?? undefined;
+          }
+          changed = true;
+        }
+      }
+      if (changed) await running.save();
+      if (!user.isOnShift) {
+        user.isOnShift = true;
+        await user.save();
+      }
+
+      return NextResponse.json(
+        { message: "Shift already in progress", shift: running, segment: open, resumed: false },
+        { status: 200 },
+      );
+    }
+
+    const segment = buildSegment({
+      startTime: now,
+      hospitalId,
       startLocation,
-      hospitalId: hospitalId || undefined,
       startFenceStatus: fence?.status,
       startDistanceMeters: fence?.distanceMeters ?? undefined,
     });
-  } catch (err) {
-    // 11000 = duplicate key from the partial-unique index (a concurrent start won the race).
-    if ((err as { code?: number })?.code === 11000) {
-      const raced = await Shift.findOne({ userId: userPayload._id, status: shiftStatus.IN_PROGRESS });
-      cookieStore.set('shiftStatus', shiftStatus.IN_PROGRESS);
-      return NextResponse.json({ message: "Shift already in progress", shift: raced }, { status: 200 });
+
+    // (2) Today's shift exists but was closed — append a session.
+    //     `status: ENDED` in the filter IS the compare-and-swap: whichever tab
+    //     flips it first wins, and the loser falls through to branch (1) next
+    //     iteration and gets the same shift. A duplicate-key error is
+    //     impossible here because this is an update, not an insert.
+    const resumed: any = await Shift.findOneAndUpdate(
+      { userId: userPayload._id, dayKey: todayKey, status: shiftStatus.ENDED },
+      {
+        $push: { segments: segment },
+        $inc: { sessionsCount: 1 },
+        $set: {
+          status: shiftStatus.IN_PROGRESS,
+          currentSegmentStartedAt: now,
+          lastActivityAt: now,
+          autoClosed: false,
+        },
+        $unset: { endTime: "", endLocation: "", closeReason: "" },
+      },
+      { new: true },
+    );
+    if (resumed) {
+      if (!user.isOnShift) {
+        user.isOnShift = true;
+        await user.save();
+      }
+      return NextResponse.json(
+        {
+          message: "Shift resumed",
+          shift: resumed,
+          segment: resumed.segments[resumed.segments.length - 1],
+          resumed: true,
+        },
+        { status: 200 },
+      );
     }
-    throw err;
+
+    // (3) First check-in of the day.
+    try {
+      const created = await Shift.create({
+        userId: userPayload._id,
+        dayKey: todayKey,
+        segments: [segment],
+        sessionsCount: 1,
+        workedMinutes: 0,
+        currentSegmentStartedAt: now,
+        startTime: now,
+        status: shiftStatus.IN_PROGRESS,
+        lastActivityAt: now,
+        startLocation,
+        hospitalId: hospitalId || undefined,
+        startFenceStatus: fence?.status,
+        startDistanceMeters: fence?.distanceMeters ?? undefined,
+      });
+
+      user.shifts.push(created._id);
+      user.isOnShift = true;
+      await user.save();
+
+      return NextResponse.json(
+        { message: "Shift Started", shift: created, segment: created.segments[0], resumed: false },
+        { status: 201 },
+      );
+    } catch (err) {
+      // 11000 = the {userId, dayKey} unique index; a concurrent request won the
+      // insert. Loop round — branch (1) or (2) will now match it.
+      if ((err as { code?: number })?.code === 11000) continue;
+      throw err;
+    }
   }
 
-  user.shifts.push(newShift._id);
-  user.isOnShift = true;
-  await user.save();
-
-  cookieStore.set('shiftStatus', shiftStatus.IN_PROGRESS)
-
-  return NextResponse.json({ message: "Shift Started", shift: newShift }, { status: 201 });
+  return NextResponse.json(
+    { status: 409, message: "تعذّر بدء الدوام بسبب تعارض. حاول مرة أخرى." },
+    { status: 409 },
+  );
 }

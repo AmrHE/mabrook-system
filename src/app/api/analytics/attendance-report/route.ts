@@ -91,23 +91,34 @@ export async function GET(req: NextRequest) {
         else excusedLateDays++;
       }
 
-      // Per-shift aggregates.
-      const shiftsCount = list.length;
+      /**
+       * Two different denominators now that a shift is a DAY, not a check-in:
+       *   days     — one row per day-shift (identical to `attendedDays`)
+       *   sessions — Σ check-in → check-out pairs across those days
+       *
+       * Averages denominate on days ("what does a working day look like"),
+       * while the auto-close rates denominate on sessions: someone who checked
+       * out cleanly three times and was auto-closed once should not read as
+       * 100% delinquent.
+       */
       let totalHours = 0;
-      let endedShifts = 0;
-      let autoClosedShifts = 0;
-      let forgotShifts = 0;
+      let sessionsCount = 0;
+      let autoClosedSessions = 0;
+      let forgotSessions = 0;
+      let forgotDays = 0;
       for (const s of list) {
-        if (s.durH != null) {
-          totalHours += Math.max(0, s.durH);
-          endedShifts++;
-        }
-        if (s.autoClosed) autoClosedShifts++;
+        totalHours += Math.max(0, s.durH);
+        sessionsCount += s.sessions;
+        autoClosedSessions += s.autoClosedSessions;
+        forgotSessions += s.forgotSessions;
+        // The DAY was abandoned: its final session was closed by the system.
         if (
           s.autoClosed &&
-          (s.closeReason === shiftCloseReason.MAX_DURATION || s.closeReason === shiftCloseReason.INACTIVITY)
+          (s.closeReason === shiftCloseReason.MAX_DURATION ||
+            s.closeReason === shiftCloseReason.INACTIVITY ||
+            s.closeReason === shiftCloseReason.DAY_ROLLOVER)
         ) {
-          forgotShifts++;
+          forgotDays++;
         }
       }
 
@@ -132,7 +143,7 @@ export async function GET(req: NextRequest) {
         email: emp.email ?? "",
         role: userRoleLabel(emp.role),
         isOnShift: !!emp.isOnShift,
-        shiftsCount,
+        sessionsCount,
         attendedDays,
         expectedDays,
         adherenceBase,
@@ -151,14 +162,16 @@ export async function GET(req: NextRequest) {
         totalHours: round(totalHours, 1),
         expectedHours,
         hoursMetRate: rate(totalHours, expectedHours),
-        avgHoursPerShift: endedShifts > 0 ? round(totalHours / endedShifts, 1) : 0,
+        avgHoursPerDay: attendedDays > 0 ? round(totalHours / attendedDays, 1) : 0,
         visits,
         moms,
-        avgVisitsPerShift: shiftsCount > 0 ? round(visits / shiftsCount, 1) : 0,
-        avgMomsPerShift: shiftsCount > 0 ? round(moms / shiftsCount, 1) : 0,
-        autoClosedShifts,
-        autoClosedRate: rate(autoClosedShifts, shiftsCount),
-        forgotToEndRate: rate(forgotShifts, shiftsCount),
+        avgVisitsPerDay: attendedDays > 0 ? round(visits / attendedDays, 1) : 0,
+        avgMomsPerDay: attendedDays > 0 ? round(moms / attendedDays, 1) : 0,
+        autoClosedSessions,
+        autoClosedRate: rate(autoClosedSessions, sessionsCount),
+        forgotToEndRate: rate(forgotSessions, sessionsCount),
+        forgotDays,
+        forgotDaysRate: rate(forgotDays, attendedDays),
       };
     });
 

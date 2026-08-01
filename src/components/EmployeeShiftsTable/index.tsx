@@ -6,22 +6,24 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/app/(internal)/visits/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import LocationModal from "@/components/LocationModal";
-
-const CLOSE_REASON_AR: Record<string, string> = {
-  MANUAL: "يدوي",
-  LOGOUT: "تسجيل خروج",
-  MAX_DURATION: "تجاوز المدة",
-  INACTIVITY: "خمول",
-  DUPLICATE: "مكرر",
-};
+import SessionsModal from "@/components/SessionsModal";
+import { closeReasonLabel } from "@/utils/shift/labels";
 
 const fmtDT = (d: any) =>
   d ? new Date(d).toLocaleString("en-SA", { timeZone: "Asia/Riyadh", dateStyle: "short", timeStyle: "short" }) : "—";
 
 const columns: ColumnDef<any>[] = [
-  { accessorKey: "start", header: "البداية" },
-  { accessorKey: "end", header: "النهاية" },
-  { accessorKey: "durationHours", header: "المدة (س)" },
+  { accessorKey: "dayKey", header: "التاريخ" },
+  { accessorKey: "start", header: "أول دخول" },
+  { accessorKey: "end", header: "آخر خروج" },
+  { accessorKey: "durationHours", header: "ساعات العمل" },
+  {
+    accessorKey: "sessionsCount",
+    header: "الجلسات",
+    cell: ({ row }) => (
+      <SessionsModal sessions={row.original.sessions} count={row.original.sessionsCount} />
+    ),
+  },
   { accessorKey: "visitsCount", header: "زيارات" },
   { accessorKey: "momsCount", header: "أمهات" },
   { accessorKey: "onTime", header: "الالتزام" },
@@ -54,9 +56,15 @@ export default function EmployeeShiftsTable({ userToken, employeeId }: { userTok
       .then((j) => {
         if (cancelled) return;
         const data = (j.data || []).map((d: any) => ({
+          dayKey: d.dayKey ?? "",
           start: fmtDT(d.startTime),
           end: fmtDT(d.endTime),
           durationHours: d.durationHours ?? "—",
+          sessionsCount: d.sessionsCount ?? 1,
+          sessions: (d.sessions ?? []).map((s: any) => ({
+            ...s,
+            closeReason: closeReasonLabel(s.closeReason),
+          })),
           visitsCount: d.visitsCount ?? 0,
           momsCount: d.momsCount ?? 0,
           onTime: d.onTime ? "في الوقت" : "متأخر",
@@ -66,7 +74,7 @@ export default function EmployeeShiftsTable({ userToken, employeeId }: { userTok
             d.startLocation && Number.isFinite(d.startLocation.lat)
               ? `${d.startLocation.lat.toFixed(4)}, ${d.startLocation.lng.toFixed(4)}`
               : "",
-          closeReason: d.closeReason ? CLOSE_REASON_AR[d.closeReason] ?? d.closeReason : "",
+          closeReason: closeReasonLabel(d.closeReason),
         }));
         setRows(data);
       })

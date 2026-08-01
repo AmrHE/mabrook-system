@@ -20,7 +20,10 @@ export const dynamic = "force-dynamic";
 
 interface Bucket {
   users: Set<string>;
+  /** Employee-days in this bucket (one per day-shift). */
   shifts: number;
+  /** Σ check-in → check-out pairs across those days. */
+  sessions: number;
   onTime: number;
   lateCount: number;
   excusedLateCount: number;
@@ -33,6 +36,7 @@ interface Bucket {
 const emptyBucket = (): Bucket => ({
   users: new Set(),
   shifts: 0,
+  sessions: 0,
   onTime: 0,
   lateCount: 0,
   excusedLateCount: 0,
@@ -96,9 +100,13 @@ export async function GET(req: NextRequest) {
       for (const s of stats.shifts) {
         const b = bucketFor(s.dayKey);
         b.users.add(uid);
+        // One vote per employee-DAY. Before shifts collapsed by day, an employee
+        // who checked in three times cast three punctuality votes and skewed the
+        // on-time rate against themselves.
         b.shifts++;
-        if (s.durH != null) b.totalHours += Math.max(0, s.durH);
-        if (s.autoClosed) b.autoClosedCount++;
+        b.sessions += s.sessions;
+        b.totalHours += Math.max(0, s.durH);
+        b.autoClosedCount += s.autoClosedSessions;
 
         if (s.localMin <= lateThreshold) {
           b.onTime++;
@@ -128,6 +136,7 @@ export async function GET(req: NextRequest) {
         date: key,
         presentEmployees: b.users.size,
         shifts: b.shifts,
+        sessions: b.sessions,
         lateCount: b.lateCount,
         excusedLateCount: b.excusedLateCount,
         // An excused-late shift counts as on time here: the employee had permission.

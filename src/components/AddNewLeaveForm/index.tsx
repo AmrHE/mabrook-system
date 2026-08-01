@@ -74,8 +74,8 @@ const AddNewLeaveForm = ({
       toast.error('تاريخ النهاية يجب أن يكون بعد تاريخ البداية')
       return
     }
-    if (isPermit && (!minutes || minutes < 15 || minutes > 240)) {
-      toast.error('مدة الاستئذان يجب أن تكون بين 15 و 240 دقيقة')
+    if (isPermit && (!minutes || minutes < 15 || minutes > 120)) {
+      toast.error('مدة الاستئذان يجب أن تكون بين 15 و 120 دقيقة')
       return
     }
 
@@ -172,13 +172,13 @@ const AddNewLeaveForm = ({
             type="number"
             required
             min={15}
-            max={240}
+            max={120}
             step={15}
             value={minutes}
             onChange={(e) => setMinutes(Number(e.target.value))}
             className="max-w-xs"
           />
-          <p className="text-xs text-gray-400">من 15 إلى 240 دقيقة</p>
+          <p className="text-xs text-gray-400">من 15 إلى 120 دقيقة</p>
         </div>
       )}
 

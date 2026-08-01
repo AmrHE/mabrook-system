@@ -11,8 +11,13 @@ export const dynamic = "force-dynamic";
 const DEFAULT_THRESHOLD_HOURS = 12;
 
 /**
- * Forgot-to-end shifts: still IN_PROGRESS and started more than `?thresholdHours`
- * (default 12h) ago. Not range-bound — these are always relevant.
+ * Forgot-to-end shifts: a session still running more than `?thresholdHours`
+ * (default 12h) after it began. Not range-bound — these are always relevant.
+ *
+ * Elapsed time is measured from the CURRENT SESSION's start, not the day's first
+ * check-in. Otherwise an employee who checked in at 09:00, checked out, and
+ * resumed at 18:00 would be reported as having been on shift for nine hours the
+ * moment they came back.
  */
 export async function GET(req: NextRequest) {
   await initDb();
@@ -29,22 +34,32 @@ export async function GET(req: NextRequest) {
 
     const shifts = await Shift.find({
       status: shiftStatus.IN_PROGRESS,
-      startTime: { $lt: cutoff },
+      // Legacy rows have no `currentSegmentStartedAt`, so fall back to startTime.
+      $or: [
+        { currentSegmentStartedAt: { $lt: cutoff } },
+        { currentSegmentStartedAt: { $exists: false }, startTime: { $lt: cutoff } },
+      ],
       ...excludeUsers("userId", await getExcludedUserIds()),
     })
       .populate({ path: "userId", model: "User", select: "firstName lastName email" })
       .sort({ startTime: 1 })
       .lean();
 
-    const data = (shifts as any[]).map((s) => ({
-      shiftId: String(s._id),
-      employeeName: s.userId
-        ? `${s.userId.firstName ?? ""} ${s.userId.lastName ?? ""}`.trim() || "غير محدد"
-        : "غير محدد",
-      email: s.userId?.email ?? "",
-      startTime: s.startTime,
-      elapsedHours: Math.round(((now.getTime() - new Date(s.startTime).getTime()) / 3600000) * 10) / 10,
-    }));
+    const data = (shifts as any[]).map((s) => {
+      const openSince = s.currentSegmentStartedAt ?? s.startTime;
+      return {
+        shiftId: String(s._id),
+        employeeName: s.userId
+          ? `${s.userId.firstName ?? ""} ${s.userId.lastName ?? ""}`.trim() || "غير محدد"
+          : "غير محدد",
+        email: s.userId?.email ?? "",
+        startTime: s.startTime,
+        dayKey: s.dayKey ?? "",
+        openSince,
+        sessionsCount: Math.max(1, s.segments?.length ?? 1),
+        elapsedHours: Math.round(((now.getTime() - new Date(openSince).getTime()) / 3600000) * 10) / 10,
+      };
+    });
 
     return NextResponse.json({ thresholdHours, data }, { status: 200 });
   } catch (err: any) {

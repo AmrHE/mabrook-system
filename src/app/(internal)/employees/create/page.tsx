@@ -1,15 +1,13 @@
 import CreateNewEmployee from '@/components/CreateNewEmployee'
 // import { userRoles } from '@/models/enum.constants';
 // import { redirect } from 'next/dist/server/api-utils';
-import { cookies } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import React from 'react'
 
 const CreateNewEmployeePage = async () => {
-    const cookieStore = await cookies();
-    const userToken = cookieStore.get('access_token')?.value;
-    // const role = cookieStore.get('role')?.value;
+    const { userToken } = await requireServerSession();
 
-  // if (role !== userRoles.ADMIN) {
+  // if (payload.role !== userRoles.ADMIN) {
   //   redirect('/employees');
   // }
 

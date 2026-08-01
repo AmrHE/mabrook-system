@@ -17,7 +17,7 @@ import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { warnOnFence } from "@/utils/geo/fenceToast";
-import type { ShiftType } from "@/types/types";
+import type { DayShiftDTO } from "@/utils/shift/currentState";
 
 type AssignedHospital = { _id: string; name: string; location?: { lat?: number; lng?: number } };
 
@@ -39,23 +39,34 @@ function captureLocation(): Promise<{ lat: number; lng: number } | null> {
 /**
  * Shift-start flow: pick one of the employee's ASSIGNED hospitals, capture GPS,
  * then start the shift. Soft geofence — a check-in is never blocked, only flagged.
+ *
+ * In `resume` mode the same endpoint appends a session to today's existing
+ * shift instead of opening a new one, so an interrupted day stays a single
+ * record. The hospital is pre-selected from that shift but stays changeable —
+ * each session records its own.
  */
 export default function StartShiftDialog({
   userToken,
   open,
   onOpenChange,
   onStarted,
+  mode = "start",
+  resumableShift,
 }: {
   userToken: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onStarted: (shift: ShiftType) => void;
+  onStarted: () => void | Promise<void>;
+  mode?: "start" | "resume";
+  resumableShift?: DayShiftDTO | null;
 }) {
   const [hospitals, setHospitals] = useState<AssignedHospital[]>([]);
   const [loadingHospitals, setLoadingHospitals] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [hospitalId, setHospitalId] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const isResume = mode === "resume" && !!resumableShift;
 
   useEffect(() => {
     if (!open) return;
@@ -66,6 +77,11 @@ export default function StartShiftDialog({
       .catch(() => setHospitals([]))
       .finally(() => setLoadingHospitals(false));
   }, [open, userToken]);
+
+  // One-tap resume: default to the hospital the day was started at.
+  useEffect(() => {
+    if (open && isResume && resumableShift?.hospitalId) setHospitalId(resumableShift.hospitalId);
+  }, [open, isResume, resumableShift?.hospitalId]);
 
   const hasHospitals = hospitals.length > 0;
 
@@ -86,8 +102,11 @@ export default function StartShiftDialog({
       });
       const data = await res.json();
       if (data.shift) {
-        warnOnFence(data.shift.startFenceStatus, data.shift.startDistanceMeters);
-        onStarted(data.shift);
+        // Warn on the segment just created, not on the shift: the shift's fence
+        // fields describe the day's FIRST check-in, which on a resume is hours old.
+        const seg = data.segment ?? data.shift;
+        warnOnFence(seg.startFenceStatus, seg.startDistanceMeters);
+        await onStarted();
         onOpenChange(false);
         setHospitalId("");
       } else {
@@ -102,9 +121,19 @@ export default function StartShiftDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>بدء الدوام</DialogTitle>
-          <DialogDescription>اختر المستشفى الذي تبدأ الدوام فيه</DialogDescription>
+          <DialogTitle>{isResume ? "استئناف الدوام" : "بدء الدوام"}</DialogTitle>
+          <DialogDescription>
+            {isResume
+              ? "اختر المستشفى الذي تستأنف الدوام فيه"
+              : "اختر المستشفى الذي تبدأ الدوام فيه"}
+          </DialogDescription>
         </DialogHeader>
+
+        {isResume && (
+          <p className="text-sm text-gray-500">
+            سيتم إضافة جلسة جديدة إلى دوام اليوم (الجلسة رقم {(resumableShift?.sessionsCount ?? 0) + 1}).
+          </p>
+        )}
 
         {loadingHospitals ? (
           <div className="flex items-center gap-2 text-gray-500 py-4">

@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 // import bcrypt from "bcrypt";
 import { initDb } from "../../../../lib/mongoose";
 import { User } from "@/models/User";
-import { createUserToken } from "@/utils/catchErrors";
-import { cookies } from "next/headers";
+import { createSessionFamily } from "@/utils/auth/session.server";
+import {
+  ACCESS_COOKIE,
+  APP_STATE_COOKIES,
+  LEGACY_COOKIES,
+  REFRESH_COOKIE,
+  authCookieOptions,
+  clearLegacyCookieOptions,
+  signAccessToken,
+} from "@/utils/auth/tokens";
 
 export async function POST(req: NextRequest) {
   await initDb();
   const reqBody = await req.json()
-  
+
   const {email, password} = reqBody;
   if (!email || !password) {
     return NextResponse.json({status: 400, message: "a required field is missing"})
@@ -19,8 +27,8 @@ export async function POST(req: NextRequest) {
   if (user === null) {
     return NextResponse.json({status: 404, message: "this email cannot be found"})
   }
-  
-  
+
+
   if(user.isActive === false) {
     return NextResponse.json({status: 404, message: "this account has been deleted"})
   }
@@ -37,12 +45,26 @@ export async function POST(req: NextRequest) {
 
   user.password = ''; // not to return this field to the frontend
 
-  const {userToken, tokenExpiration} = createUserToken(user.toObject() as unknown)
-  const cookieStore = await cookies()
-  cookieStore.set('access_token', userToken)
-  cookieStore.set('role', user.role)
-  cookieStore.set('email', user.email)
-  cookieStore.set('userId', user._id)
+  // A login starts a brand-new refresh family; `sid` lets logout find it again
+  // even if the refresh cookie is missing.
+  const { raw, doc } = await createSessionFamily(user._id, req);
+  const userToken = signAccessToken({
+    _id: String(user._id),
+    email: user.email,
+    role: user.role,
+    sid: String(doc._id),
+  });
 
-  return NextResponse.json({user, userToken, tokenExpiration, status: 200});
+  const res = NextResponse.json({ user, userToken, status: 200 });
+  res.cookies.set(ACCESS_COOKIE, userToken, authCookieOptions);
+  res.cookies.set(REFRESH_COOKIE, raw, authCookieOptions);
+
+  // role/email/userId are gone — server components read them off the verified
+  // token now. Clear whatever the previous build left in the jar, along with the
+  // shift/visit UI-state cookies, which would otherwise leak the PREVIOUS user's
+  // open visit to whoever logs in next on this browser.
+  for (const name of LEGACY_COOKIES) res.cookies.set(name, "", clearLegacyCookieOptions);
+  for (const name of APP_STATE_COOKIES) res.cookies.set(name, "", clearLegacyCookieOptions);
+
+  return res;
 }

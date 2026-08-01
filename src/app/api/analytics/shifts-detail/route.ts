@@ -78,13 +78,45 @@ export async function GET(req: NextRequest) {
           },
           email: { $ifNull: ["$employee.email", ""] },
           status: 1,
+          dayKey: {
+            $ifNull: [
+              "$dayKey",
+              { $dateToString: { date: "$startTime", format: "%Y-%m-%d", timezone: TIMEZONE } },
+            ],
+          },
           startTime: 1,
           endTime: 1,
+          sessionsCount: { $max: [1, { $size: { $ifNull: ["$segments", []] } }] },
+          sessions: {
+            $map: {
+              input: { $ifNull: ["$segments", []] },
+              as: "s",
+              in: {
+                startTime: "$$s.startTime",
+                endTime: "$$s.endTime",
+                autoClosed: "$$s.autoClosed",
+                closeReason: "$$s.closeReason",
+                startFenceStatus: "$$s.startFenceStatus",
+                startDistanceMeters: "$$s.startDistanceMeters",
+                // Needed by the check-in map: one pin per SESSION, not per day.
+                startLocation: "$$s.startLocation",
+                endLocation: "$$s.endLocation",
+              },
+            },
+          },
+          // Summed sessions, not the day's span — the span would bill the gaps
+          // between an employee's check-outs and check-ins.
           durationHours: {
             $cond: [
-              { $and: [{ $eq: ["$status", shiftStatus.ENDED] }, { $ne: ["$endTime", null] }] },
-              { $round: [{ $divide: [{ $subtract: ["$endTime", "$startTime"] }, 3600000] }, 1] },
-              null,
+              { $gt: [{ $ifNull: ["$workedMinutes", 0] }, 0] },
+              { $round: [{ $divide: ["$workedMinutes", 60] }, 1] },
+              {
+                $cond: [
+                  { $and: [{ $eq: ["$status", shiftStatus.ENDED] }, { $ne: ["$endTime", null] }] },
+                  { $round: [{ $divide: [{ $subtract: ["$endTime", "$startTime"] }, 3600000] }, 1] },
+                  null,
+                ],
+              },
             ],
           },
           visitsCount: 1,

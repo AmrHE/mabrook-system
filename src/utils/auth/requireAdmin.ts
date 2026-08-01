@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
 import { userRoles } from "@/models/enum.constants";
+import { resolveAuthPayload } from "@/utils/auth/requireAuth";
+import type { AuthPayload } from "@/utils/auth/tokens";
 
-export type AdminPayload = { _id: string; email: string; role: string };
+export type AdminPayload = AuthPayload;
 
 type RequireAdminResult =
   | { payload: AdminPayload; error?: undefined }
   | { payload?: undefined; error: NextResponse };
 
 /**
- * Inline JWT guard for admin-only endpoints. Mirrors the copy-pasted guard in
- * the existing get routes (e.g. src/app/api/user/get-all/route.ts) but returns
- * proper HTTP status codes so a non-admin caller gets a real 401/403.
+ * Guard for admin-only endpoints. Accepts the same two credentials as
+ * `requireAuth` (Bearer header, then the httpOnly access-token cookie) and then
+ * enforces the ADMIN role, returning a real 401/403 rather than a 200 with an
+ * error in the body.
  *
  * Usage:
  *   const auth = requireAdmin(req);
@@ -19,35 +21,13 @@ type RequireAdminResult =
  *   const { payload } = auth;
  */
 export function requireAdmin(req: NextRequest): RequireAdminResult {
-  const authHeader = req.headers.get("authorization");
-  const userToken = authHeader?.split(" ")[1];
-
-  if (!userToken) {
-    return {
-      error: NextResponse.json(
-        { status: 401, message: "Session has timed out. Please log in to use Mabrook System" },
-        { status: 401 },
-      ),
-    };
-  }
-
-  let payload: AdminPayload;
-  try {
-    payload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as AdminPayload;
-  } catch {
-    return {
-      error: NextResponse.json(
-        { status: 401, message: "Invalid or expired session. Please log in again" },
-        { status: 401 },
-      ),
-    };
-  }
+  const payload = resolveAuthPayload(req);
 
   if (!payload) {
     return {
       error: NextResponse.json(
-        { status: 400, message: "Cannot identify the user Please re-login and try again" },
-        { status: 400 },
+        { status: 401, message: "Invalid or expired session. Please log in again" },
+        { status: 401 },
       ),
     };
   }

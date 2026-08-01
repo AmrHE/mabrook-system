@@ -35,10 +35,43 @@ function summarize(groups: { _id: string; count: number }[]): Counts {
   return c;
 }
 
+/**
+ * Flatten a shift's `segments[]` so each CHECK-IN is a row.
+ *
+ * This is load-bearing, not a refinement. A shift document is now a whole day,
+ * and its top-level `startFenceStatus` describes only the day's FIRST check-in.
+ * Grouping on it would count one verdict per day and silently drop every
+ * resume — an employee could check in in-range at 09:00 and out-of-range at
+ * 14:00 and never appear in this report.
+ *
+ * Legacy rows have no segments; `preserveNullAndEmptyArrays` + the `$ifNull`
+ * fallbacks keep them counted exactly as before.
+ */
+const unwindShiftSessions: any[] = [
+  { $unwind: { path: "$segments", preserveNullAndEmptyArrays: true } },
+  {
+    $addFields: {
+      startFenceStatus: { $ifNull: ["$segments.startFenceStatus", "$startFenceStatus"] },
+      startDistanceMeters: { $ifNull: ["$segments.startDistanceMeters", "$startDistanceMeters"] },
+      startLocation: { $ifNull: ["$segments.startLocation", "$startLocation"] },
+      hospitalId: { $ifNull: ["$segments.hospitalId", "$hospitalId"] },
+      sessionStartTime: { $ifNull: ["$segments.startTime", "$startTime"] },
+    },
+  },
+];
+
 /** Outlier (OUT_OF_RANGE) pipeline for a collection keyed on its user/time fields. */
-function outlierPipeline(match: any, userField: string, timeField: string, type: "shift" | "visit"): any[] {
+function outlierPipeline(
+  match: any,
+  userField: string,
+  timeField: string,
+  type: "shift" | "visit",
+  prefix: any[] = [],
+): any[] {
   return [
-    { $match: { ...match, startFenceStatus: fenceStatus.OUT_OF_RANGE } },
+    { $match: match },
+    ...prefix,
+    { $match: { startFenceStatus: fenceStatus.OUT_OF_RANGE } },
     { $lookup: { from: "users", localField: userField, foreignField: "_id", as: "u" } },
     { $unwind: { path: "$u", preserveNullAndEmptyArrays: true } },
     { $lookup: { from: "hospitals", localField: "hospitalId", foreignField: "_id", as: "h" } },
@@ -82,9 +115,14 @@ export async function GET(req: NextRequest) {
     const visitMatch = { createdAt: { $gte: from, $lt: to }, isActive: true, ...excludeUsers("createdBy", excludedIds) };
 
     const [shiftGroups, visitGroups, shiftOutliers, visitOutliers, hospitalsNeedingLocation] = await Promise.all([
-      Shift.aggregate([{ $match: { ...shiftMatch, startFenceStatus: { $ne: null } } }, { $group: { _id: "$startFenceStatus", count: { $sum: 1 } } }]),
+      Shift.aggregate([
+        { $match: shiftMatch },
+        ...unwindShiftSessions,
+        { $match: { startFenceStatus: { $ne: null } } },
+        { $group: { _id: "$startFenceStatus", count: { $sum: 1 } } },
+      ]),
       Visit.aggregate([{ $match: { ...visitMatch, startFenceStatus: { $ne: null } } }, { $group: { _id: "$startFenceStatus", count: { $sum: 1 } } }]),
-      Shift.aggregate(outlierPipeline(shiftMatch, "userId", "startTime", "shift")),
+      Shift.aggregate(outlierPipeline(shiftMatch, "userId", "sessionStartTime", "shift", unwindShiftSessions)),
       Visit.aggregate(outlierPipeline(visitMatch, "createdBy", "startTime", "visit")),
       Hospital.find({ isActive: true, "location.lat": null }).select("name city district").lean(),
     ]);

@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import { notFound, redirect } from "next/navigation";
 import { userRoles } from "@/models/enum.constants";
 import { DQ_BY_SLUG } from "@/utils/analytics/dataQualityCategories";
@@ -13,9 +13,8 @@ const DataQualityCategoryPage = async ({
   params: Promise<{ category: string }>;
   searchParams: Promise<{ from?: string; to?: string }>;
 }) => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get("access_token")?.value;
-  const role = cookieStore.get("role")?.value;
+  const { userToken, payload } = await requireServerSession();
+  const role = payload.role;
 
   if (role !== userRoles.ADMIN) redirect("/");
 

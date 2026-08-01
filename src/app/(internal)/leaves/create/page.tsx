@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { requireServerSession } from "@/utils/auth/serverSession.server";
 import AddNewLeaveForm from '@/components/AddNewLeaveForm';
 import { addDaysToDayKey, riyadhDayKey } from '@/utils/date/range';
 import { getSettings } from '@/utils/settings/getSettings';
@@ -14,8 +14,7 @@ export const dynamic = 'force-dynamic';
  * timezone — the API enforces the same bounds regardless.
  */
 const CreateLeavePage = async () => {
-  const cookieStore = await cookies();
-  const userToken = cookieStore.get('access_token')?.value;
+  const { userToken } = await requireServerSession();
 
   await initDb();
   const settings = await getSettings();

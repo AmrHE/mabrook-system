@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 // import bcrypt from "bcrypt";
-import jwt from 'jsonwebtoken';
+import { requireAuth } from "@/utils/auth/requireAuth";
 import { userRoles } from "@/models/enum.constants";
 import { initDb } from "../../../../lib/mongoose";
 import { User } from "@/models/User";
@@ -11,13 +11,9 @@ import { resolveProject } from "@/utils/project/projects.server";
 export async function POST(req: NextRequest) {
 
   /***************ADMIN GAURD START****************/
-  const authHeader = req.headers.get('authorization');
-  const userToken = authHeader?.split(" ")[1];
-  if (!userToken){
-    return NextResponse.json({status: 401, message: "Session has timed out. Please log in to use Mabrook System"})
-  }
-
-  const userPayload = jwt.verify(userToken, process.env.AUTH_SECRET as string) as { _id: string; email: string; role: string }
+  const auth = requireAuth(req);
+  if (auth.error) return auth.error;
+  const userPayload = auth.payload;
 
   if (userPayload.role !== userRoles.ADMIN){
     return NextResponse.json({status: 403, message: "This Action is only allowed for Admins"})
