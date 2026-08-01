@@ -11,9 +11,10 @@ type SurveyEntry = {
 };
 
 /**
- * Answers the survey questions for the single box given to this mom. The box
- * itself is locked at mom creation (it drove the stock decrement); here we only
- * edit the answers, so add-survey never re-touches stock.
+ * Answers the survey questions for each box given to this mom (a mom may
+ * receive several). The boxes themselves are locked at mom creation (they drove
+ * the stock decrements); here we only edit the answers, so add-survey never
+ * re-touches stock.
  */
 export default function SurveyForm({ survey: initialSurvey, id, userToken }: { survey: SurveyEntry[]; id: string; userToken: string | undefined }) {
   const [isLoading, setIsLoading] = useState(false);

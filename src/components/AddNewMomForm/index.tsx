@@ -37,10 +37,17 @@ const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | unde
   const [responseMessage, setResponseMessage] = useState<string | null>("")
   const sigCanvas = useRef<SignatureCanvas>(null)
 
-  // Boxes available at this visit's hospital + the one the employee is handing out.
+  // Boxes available at this visit's hospital + the ones the employee is handing
+  // out. A mom may receive several boxes, so this is a checklist, not a picker.
   const [boxes, setBoxes] = useState<{ productId: string; name: string; quantity: number }[]>([])
-  const [boxId, setBoxId] = useState('')
-  const selectedBox = boxes.find((b) => b.productId === boxId)
+  const [boxIds, setBoxIds] = useState<string[]>([])
+  const outOfStockSelected = boxes.filter((b) => boxIds.includes(b.productId) && b.quantity <= 0)
+
+  const toggleBox = (productId: string) => {
+    setBoxIds((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId],
+    )
+  }
 
   useEffect(() => {
     if (!visitId) return
@@ -75,8 +82,8 @@ const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | unde
       toast.error('الرجاء اختيار الجنسية')
       return
     }
-    if (!boxId) {
-      toast.error('الرجاء اختيار الصندوق')
+    if (boxIds.length === 0) {
+      toast.error('الرجاء اختيار صندوق واحد على الأقل')
       return
     }
     setIsLoading(true)
@@ -123,7 +130,7 @@ const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | unde
         phoneNumber,
         allowFutureCom,
         installedApp,
-        boxId,
+        boxIds,
         signature: uploadedSignatureUrl, // ✅ save Cloudinary URL instead of base64
       }),
     })
@@ -202,26 +209,47 @@ const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | unde
       <Label>التطبيقات المثبّتة (اختياري)</Label>
       <AppMultiSelect value={installedApp} onChange={setInstalledApp} />
 
-      <Label htmlFor="box">الصندوق الموزّع</Label>
-      <Select value={boxId} onValueChange={setBoxId}>
-        <SelectTrigger className='w-full'>
-          <SelectValue placeholder="اختر الصندوق" />
-        </SelectTrigger>
-        <SelectContent>
+      <Label>الصناديق الموزّعة (يمكن اختيار أكثر من صندوق)</Label>
+      <div className='rounded-md border bg-white'>
+        <div className='flex items-center justify-between gap-2 border-b p-2'>
+          <span className='text-sm text-muted-foreground'>اختر الصناديق التي تم تسليمها</span>
+          <div className='flex shrink-0 items-center gap-2'>
+            <span className='text-xs text-muted-foreground'>{boxIds.length} محدد</span>
+            {boxIds.length > 0 && (
+              <button
+                type='button'
+                onClick={() => setBoxIds([])}
+                className='text-xs text-[#5570F1] hover:underline'
+              >
+                مسح
+              </button>
+            )}
+          </div>
+        </div>
+        <div className='max-h-56 space-y-1 overflow-y-auto p-1'>
           {boxes.length === 0 ? (
-            <SelectItem value="none" disabled>لا توجد صناديق</SelectItem>
+            <p className='py-3 text-center text-sm text-muted-foreground'>لا توجد صناديق</p>
           ) : (
             boxes.map((b) => (
-              <SelectItem key={b.productId} value={b.productId}>
-                {b.name} (المتبقي: {b.quantity})
-              </SelectItem>
+              <label
+                key={b.productId}
+                className='flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 hover:bg-muted'
+              >
+                <Checkbox
+                  checked={boxIds.includes(b.productId)}
+                  onCheckedChange={() => toggleBox(b.productId)}
+                />
+                <span className='text-sm'>{b.name}</span>
+                <span className='text-xs text-muted-foreground'>(المتبقي: {b.quantity})</span>
+              </label>
             ))
           )}
-        </SelectContent>
-      </Select>
-      {selectedBox && selectedBox.quantity <= 0 && (
+        </div>
+      </div>
+      {outOfStockSelected.length > 0 && (
         <p className='text-amber-600 text-sm'>
-          تنبيه: هذا الصندوق نفد من مخزون هذا المستشفى؛ سيصبح المخزون بالسالب عند الحفظ.
+          تنبيه: الصناديق التالية نفدت من مخزون هذا المستشفى؛ سيصبح المخزون بالسالب عند الحفظ:{' '}
+          {outOfStockSelected.map((b) => b.name).join('، ')}
         </p>
       )}
 

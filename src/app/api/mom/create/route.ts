@@ -21,15 +21,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({status: 400, message: 'Cannot identify the user Please re-login and try again'});
   }
 
-  const { name, age, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId, phoneNumber, allowFutureCom, signature, installedApp, boxId } = await req.json();
+  const { name, age, nationality, address, numberOfKids, numberOfnewborns, numberOfMales, numberOfFemales, genderOfNewborns, visitId, phoneNumber, allowFutureCom, signature, installedApp, boxId, boxIds } = await req.json();
   if ( !name ) {
     return NextResponse.json({ error: 'Must fill in the name', message: 'الرجاء إدخال اسم الأم' }, { status: 400 });
   }
 
-  // Every mom receives exactly one box; picking it here both records the
-  // distribution (mom.survey) and decrements that hospital's stock.
-  if (!boxId) {
-    return NextResponse.json({ error: 'boxId is required', message: 'الرجاء اختيار الصندوق' }, { status: 400 });
+  // A mom may receive several boxes; picking them here both records the
+  // distributions (one mom.survey entry per box) and decrements that hospital's
+  // stock once per box. `boxId` is still accepted for older clients.
+  // De-duplicated: survey entries are keyed by product, so the same box can only
+  // appear once (a second entry would shadow the first when answering the survey).
+  const requestedBoxIds: string[] = Array.isArray(boxIds) ? boxIds : boxId ? [boxId] : [];
+  const selectedBoxIds = [...new Set(requestedBoxIds.filter(Boolean).map(String))];
+  if (!selectedBoxIds.length) {
+    return NextResponse.json({ error: 'boxIds is required', message: 'الرجاء اختيار صندوق واحد على الأقل' }, { status: 400 });
+  }
+  if (selectedBoxIds.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
+    return NextResponse.json({ error: 'Invalid box id', message: 'أحد الصناديق المختارة غير موجود' }, { status: 400 });
   }
 
   // These counts are required and must be valid non-negative numbers.
@@ -65,10 +73,10 @@ export async function POST(req: NextRequest) {
   try {
     await initDb();
 
-    // The selected box drives both the survey record and the stock decrement.
-    const box = await Product.findOne({ _id: boxId, isActive: true });
-    if (!box) {
-      return NextResponse.json({ error: 'Box not found', message: 'الصندوق غير موجود' }, { status: 400 });
+    // The selected boxes drive both the survey records and the stock decrements.
+    const selectedBoxes = await Product.find({ _id: { $in: selectedBoxIds }, isActive: true });
+    if (selectedBoxes.length !== selectedBoxIds.length) {
+      return NextResponse.json({ error: 'Box not found', message: 'أحد الصناديق المختارة غير موجود' }, { status: 400 });
     }
 
     const session = await mongoose.startSession();
@@ -96,20 +104,22 @@ export async function POST(req: NextRequest) {
           allowFutureCom,
           signature,
           installedApp: canonicalApps,
-          // Distribution record: the given box + its (initially blank) questions.
-          survey: [{
+          // Distribution record: one entry per given box + its (initially blank) questions.
+          survey: selectedBoxes.map((box: any) => ({
             product: box._id,
             QA: (box.questions || []).map((q: string) => ({ question: q, answer: "" })),
-          }],
+          })),
         }], { session });
 
         visit.moms.push(mom._id);
         await visit.save({ session });
 
-        // Hand the box to the mom → one unit leaves this hospital's stock.
-        // Quantity may go negative (out-of-stock is "warn but allow").
+        // Hand the boxes to the mom → one unit of each leaves this hospital's
+        // stock. Quantity may go negative (out-of-stock is "warn but allow").
         if (visit.hospitalId) {
-          await adjustHospitalStock(visit.hospitalId, box._id, -1, session);
+          for (const box of selectedBoxes) {
+            await adjustHospitalStock(visit.hospitalId, box._id, -1, session);
+          }
         }
 
         newMom = mom;
