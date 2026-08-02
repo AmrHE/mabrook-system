@@ -87,7 +87,7 @@ export default function HospitalLocationPicker({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 z-0">
       <div className="flex gap-2">
         <Input
           placeholder="ابحث عن اسم المستشفى أو العنوان..."

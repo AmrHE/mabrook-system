@@ -101,7 +101,7 @@ export default function EditHospitalForm({
         userToken={userToken}
         isAdmin={isAdmin}
       />
-      <div className="grid gap-1.5">
+      <div className="grid gap-1.5 z-50">
         <Label>موقع المستشفى (لتقييد تسجيل الحضور)</Label>
         <HospitalLocationPicker value={location} onChange={setLocation} />
       </div>

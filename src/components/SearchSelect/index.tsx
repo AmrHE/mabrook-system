@@ -96,7 +96,7 @@ export default function SearchSelect({
         align="start"
         side="bottom"
         sideOffset={4}
-        className="p-0 z-50"
+        className="p-0 z-100"
         style={{ width: "var(--radix-popover-trigger-width)" }}
       >
         <Command shouldFilter={false} dir="rtl">
