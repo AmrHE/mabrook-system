@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useTransition } from 'react'
 import { Label } from '../ui/label'
 import { Input } from '../ui/input'
 import { useParams, useRouter } from 'next/navigation'
@@ -13,6 +13,8 @@ const AddQuestionsForm = ({ userToken, product }: { userToken: string | undefine
 
   const [questions, setQuestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const busy = isLoading || isPending
 
   const router = useRouter();
 
@@ -39,8 +41,8 @@ const AddQuestionsForm = ({ userToken, product }: { userToken: string | undefine
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    setIsLoading(true)
     e.preventDefault();
+    setIsLoading(true)
     try {
       const res = await fetch(`/api/product/add-questions/${productId}`, {
         method: 'PATCH',
@@ -51,16 +53,19 @@ const AddQuestionsForm = ({ userToken, product }: { userToken: string | undefine
         body: JSON.stringify({ questions }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error('حدث خطأ ما أثناء إضافة الأسئلة. الرجاء المحاولة مرة أخرى.');
-        setIsLoading(false)
+        // Without this return the success toast fired on failure too.
+        toast.error(data?.message || 'حدث خطأ ما أثناء إضافة الأسئلة. الرجاء المحاولة مرة أخرى.');
+        return;
       }
       toast.success('تمت إضافة الأسئلة بنجاح!');
-      router.push(`/products/${productId}`);
-      console.log("Questions added successfully:", data);
+      // Already on /products/[id] — refresh, don't push to the current route.
+      startTransition(() => router.refresh());
     } catch (error) {
       toast.error("Error adding questions:" + error);
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -95,8 +100,8 @@ const AddQuestionsForm = ({ userToken, product }: { userToken: string | undefine
         </Button>
       </div>
 
-      <Button type='submit' disabled={isLoading}>
-        { isLoading ? 'جاري الحفظ...' : 'احفظ الأسئلة' }
+      <Button type='submit' disabled={busy}>
+        { busy ? 'جاري الحفظ...' : 'احفظ الأسئلة' }
       </Button>
     </form>
   )

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useTransition } from 'react'
 import { Label } from '../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Input } from '../ui/input'
@@ -31,6 +31,11 @@ const CreateNewEmployee = ({userToken}: {userToken: string | undefined}) => {
   const [projects, setProjects] = useState<string[]>(['mabrook'])
   const [responseMessage, setResponseMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false)
+  // Navigating to the new record is async. Without the transition the button
+  // either re-enabled too early (double submit) or, when the request failed,
+  // never re-enabled at all.
+  const [isPending, startTransition] = useTransition()
+  const busy = isLoading || isPending
   const router = useRouter();
 
   useEffect(() => {
@@ -75,19 +80,23 @@ const CreateNewEmployee = ({userToken}: {userToken: string | undefined}) => {
         }),
       });
 
-      const data = await res.json();
-      setUpdatedUser(data.user);
+      const data = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
-        toast.error('حدث خطأ ما أثناء إضافة الموظف. الرجاء المحاولة مرة أخرى.');
-        setIsLoading(false)
+      if (!res.ok || !data?.user?._id) {
+        // Without this return the success toast fired on failure, then the
+        // push threw on data.user._id and left the button spinning.
+        toast.error(data?.message || 'حدث خطأ ما أثناء إضافة الموظف. الرجاء المحاولة مرة أخرى.');
+        return;
       }
-
-      setResponseMessage('Mom submitted successfully!');
+      setUpdatedUser(data.user);
+      setResponseMessage('تمت إضافة الموظف');
       toast.success('تمت إضافة الموظف بنجاح!');
-      router.push(`/employees/${data.user._id}`)
+      startTransition(() => router.push(`/employees/${data.user._id}`))
     } catch (error: any) {
+      toast.error('حدث خطأ ما أثناء إضافة الموظف. الرجاء المحاولة مرة أخرى.');
       setResponseMessage(`Error: ${error.message}`);
+    } finally {
+      setIsLoading(false)
     }
   };
 
@@ -242,8 +251,8 @@ const CreateNewEmployee = ({userToken}: {userToken: string | undefined}) => {
       <IdentityImageUpload value={identityImage} onChange={setIdentityImage} />
 
       <div className='flex items-center justify-center w-full mt-4'>
-        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>
-          { isLoading ? 'جاري الحفظ...' : 'اضف الموظف' }
+        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={busy}>
+          { busy ? 'جاري الحفظ...' : 'اضف الموظف' }
         </Button>
       </div>
     </form>

@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Image from 'next/image'
-import React, { useState } from 'react'
+import React, { useState, useTransition } from 'react'
 import logo from '../../../../public/logo.svg'
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner'
@@ -13,6 +13,10 @@ const Login = () => {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // Keeps the button disabled until the dashboard has actually rendered,
+  // rather than relying on this component never unmounting.
+  const [isPending, startTransition] = useTransition()
+  const busy = loading || isPending
   const router = useRouter();
 
 
@@ -29,28 +33,26 @@ const Login = () => {
         body: JSON.stringify({ email, password }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (data.status !== 200) {
         toast.error(data.message || 'Login failed');
-        setLoading(false)
         setError(data.message || 'Login failed')
       } else {
         // Handle successful login (e.g., redirect or store token)
-        router.push('/')
+        startTransition(() => router.push('/'))
       }
     } catch (err) {
       toast.error("حدث خطأ ما أثناء تسجيل الدخول. الرجاء المحاولة مرة أخرى.");
-      setLoading(false)
       console.error('Error during login:', err)
       if (err instanceof Error) {
         setError(err.message)
       } else {
         setError('An unexpected error occurred')
       }
-    }/* finally {
+    } finally {
       setLoading(false)
-    }*/
+    }
   }
 
 
@@ -78,9 +80,9 @@ const Login = () => {
         <Button
           className='bg-[#5570F1] w-44 h-14 text-xl mt-10'
           onClick={handleLogin}
-          disabled={loading}
+          disabled={busy}
         >
-          {loading ? 'Logging in...' : 'Login'}
+          {busy ? 'Logging in...' : 'Login'}
         </Button>
       </div>
     </div>

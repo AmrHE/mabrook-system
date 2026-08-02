@@ -2,7 +2,7 @@
  
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useTransition } from 'react'
 import { Label } from '../ui/label'
 import { Input } from '../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
@@ -34,6 +34,8 @@ const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | unde
   const [installedApp, setInstalledApp] = useState<string[]>([])
   const [signatureData, setSignatureData] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const busy = isLoading || isPending
   const [responseMessage, setResponseMessage] = useState<string | null>("")
   const sigCanvas = useRef<SignatureCanvas>(null)
 
@@ -88,63 +90,75 @@ const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | unde
     }
     setIsLoading(true)
 
-    const signatureImage = sigCanvas.current?.isEmpty()
-      ? null
-      : sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png')
+    // The signature upload used to throw out of this handler with no catch,
+    // which left the button on "جاري الحفظ..." with no way back.
+    try {
+      const signatureImage = sigCanvas.current?.isEmpty()
+        ? null
+        : sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png')
 
-    let uploadedSignatureUrl;
+      let uploadedSignatureUrl;
 
-    if (signatureImage && !uploadedSignatureUrl) {
-      const uploadRes = await fetch('/api/cloudinary/upload-signature', {
+      if (signatureImage) {
+        const uploadRes = await fetch('/api/cloudinary/upload-signature', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signature: signatureImage }),
+        })
+
+        const uploadData = await uploadRes.json().catch(() => ({}))
+        if (!uploadRes.ok) {
+          const message = uploadData.error || 'تعذّر رفع التوقيع. الرجاء المحاولة مرة أخرى.'
+          toast.error(message)
+          setResponseMessage(message)
+          return
+        }
+        uploadedSignatureUrl = uploadData.url
+      }
+
+      // Then submit mom data with signature URL
+      const res = await fetch('/api/mom/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ signature: signatureImage }),
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({
+          visitId,
+          name,
+          age,
+          nationality,
+          address,
+          numberOfKids,
+          numberOfnewborns,
+          numberOfMales,
+          numberOfFemales,
+          genderOfNewborns,
+          phoneNumber,
+          allowFutureCom,
+          installedApp,
+          boxIds,
+          signature: uploadedSignatureUrl, // ✅ save Cloudinary URL instead of base64
+        }),
       })
 
-      const uploadData = await uploadRes.json()
-      if (uploadRes.ok) {
-        uploadedSignatureUrl = uploadData.url
-      } else {
-        throw new Error(uploadData.error || 'Failed to upload signature')
-      }
-    }
+      const data = await res.json().catch(() => ({}))
 
-    // Then submit mom data with signature URL
-    const res = await fetch('/api/mom/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        authorization: `Bearer ${userToken}`,
-      },
-      body: JSON.stringify({
-        visitId,
-        name,
-        age,
-        nationality,
-        address,
-        numberOfKids,
-        numberOfnewborns,
-        numberOfMales,
-        numberOfFemales,
-        genderOfNewborns,
-        phoneNumber,
-        allowFutureCom,
-        installedApp,
-        boxIds,
-        signature: uploadedSignatureUrl, // ✅ save Cloudinary URL instead of base64
-      }),
-    })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        toast.error(data.message || data.error || 'حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.');
-        setIsLoading(false);
-        setResponseMessage(data.message || data.error || 'حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.');
+      if (!res.ok || !data?.mom?._id) {
+        const message = data.message || data.error || 'حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.'
+        toast.error(message);
+        setResponseMessage(message);
         return;
       }
       toast.success('تمت إضافة الام بنجاح!');
-      router.push(`/moms/${data.mom._id}`)
+      startTransition(() => router.push(`/moms/${data.mom._id}`))
+    } catch {
+      const message = 'حدث خطأ ما أثناء إضافة الام. الرجاء المحاولة مرة أخرى.'
+      toast.error(message)
+      setResponseMessage(message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -362,8 +376,8 @@ const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | unde
       </div>
 
       <div className='flex items-center justify-center w-full mt-4'>
-        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>
-          {isLoading ? 'جاري الحفظ...' : 'اضف الام'}
+        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={busy}>
+          {busy ? 'جاري الحفظ...' : 'اضف الام'}
         </Button>
       </div>
 

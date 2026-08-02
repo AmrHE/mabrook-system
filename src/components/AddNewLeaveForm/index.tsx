@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Label } from '../ui/label'
 import { Input } from '../ui/input'
@@ -48,6 +48,8 @@ const AddNewLeaveForm = ({
   const [minutes, setMinutes] = useState<number>(60)
   const [reason, setReason] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const busy = isLoading || isPending
 
   const isPermit = PERMIT_TYPES.includes(type)
   const isMultiDay = MULTI_DAY_TYPES.includes(type)
@@ -97,17 +99,16 @@ const AddNewLeaveForm = ({
       })
       const data = await res.json()
 
-      if (!res.ok) {
+      if (!res.ok || !data?.leave?._id) {
         toast.error(data.message || data.error || 'حدث خطأ أثناء إرسال الطلب')
-        setIsLoading(false)
         return
       }
 
       toast.success(data.message || 'تم إرسال الطلب بنجاح')
-      router.push(`/leaves/${data.leave._id}`)
-      router.refresh()
+      startTransition(() => router.push(`/leaves/${data.leave._id}`))
     } catch {
       toast.error('حدث خطأ أثناء إرسال الطلب')
+    } finally {
       setIsLoading(false)
     }
   }
@@ -199,8 +200,8 @@ const AddNewLeaveForm = ({
         كامل، والاستئذان غير المدفوع يُخصم بربع يوم.
       </div>
 
-      <Button type="submit" disabled={isLoading} className="bg-[#5570F1] hover:bg-[#3250e9] max-w-xs">
-        {isLoading ? 'جاري الإرسال...' : 'إرسال الطلب'}
+      <Button type="submit" disabled={busy} className="bg-[#5570F1] hover:bg-[#3250e9] max-w-xs">
+        {busy ? 'جاري الإرسال...' : 'إرسال الطلب'}
       </Button>
     </form>
   )

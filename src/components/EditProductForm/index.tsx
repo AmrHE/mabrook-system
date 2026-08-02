@@ -3,7 +3,7 @@
 "use client"
 import { Label } from '@radix-ui/react-label';
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useTransition } from 'react'
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -14,6 +14,8 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
 
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const busy = isLoading || isPending
   const router = useRouter();
 
   useEffect(() => {
@@ -37,14 +39,14 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
 
       if (!res.ok) {
         toast.error('حدث خطأ ما أثناء تعديل الصندوق. الرجاء المحاولة مرة أخرى.');
-        setIsLoading(false)
         return;
       }
       toast.success('تم تعديل الصندوق بنجاح!');
-      router.push(`/products/${productId}`);
-      router.refresh();
+      // Already on /products/[id] — refresh, don't push to the current route.
+      startTransition(() => router.refresh());
     } catch (error: any) {
       toast.error('حدث خطأ ما أثناء تعديل الصندوق. الرجاء المحاولة مرة أخرى.');
+    } finally {
       setIsLoading(false)
     }
   };
@@ -63,8 +65,8 @@ const EditProductForm = ({userToken, product}: {userToken: string | undefined, p
       />
 
       <div className='flex items-center justify-center w-full mt-4'>
-        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>
-          { isLoading ? 'جاري الحفظ...' : 'احفظ التعديلات' }
+        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={busy}>
+          { busy ? 'جاري الحفظ...' : 'احفظ التعديلات' }
         </Button>
       </div>
     </form>
