@@ -2,7 +2,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 type SurveyEntry = {
@@ -18,6 +18,8 @@ type SurveyEntry = {
  */
 export default function SurveyForm({ survey: initialSurvey, id, userToken }: { survey: SurveyEntry[]; id: string; userToken: string | undefined }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const busy = isLoading || isPending;
   const router = useRouter();
 
   const [survey, setSurvey] = useState<SurveyEntry[]>(
@@ -56,14 +58,14 @@ export default function SurveyForm({ survey: initialSurvey, id, userToken }: { s
       });
       if (!res.ok) {
         toast.error("حدث خطأ ما أثناء حفظ الإجابات. الرجاء المحاولة مرة أخرى.");
-        setIsLoading(false);
         return;
       }
       toast.success("تم حفظ الإجابات بنجاح!");
-      router.push(`/moms/${id}`);
-      router.refresh();
+      // Already on /moms/[id] — refresh, don't push to the current route.
+      startTransition(() => router.refresh());
     } catch {
       toast.error("حدث خطأ ما أثناء حفظ الإجابات. الرجاء المحاولة مرة أخرى.");
+    } finally {
       setIsLoading(false);
     }
   };
@@ -99,9 +101,9 @@ export default function SurveyForm({ survey: initialSurvey, id, userToken }: { s
       <Button
         type="submit"
         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        disabled={isLoading}
+        disabled={busy}
       >
-        {isLoading ? "جاري الحفظ..." : "احفظ الإجابات"}
+        {busy ? "جاري الحفظ..." : "احفظ الإجابات"}
       </Button>
     </form>
   );

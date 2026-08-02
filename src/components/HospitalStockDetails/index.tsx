@@ -3,7 +3,7 @@
 "use client"
 import { Label } from '@radix-ui/react-label';
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useTransition } from 'react'
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
@@ -31,6 +31,12 @@ const HospitalStockDetails = ({
   // Initialize local state with the current stock quantities
   const [stocks, setStocks] = useState<ProductStock[]>(productStocks);
   const [isLoading, setIsLoading] = useState(false)
+  // router.refresh() is async: it re-renders the server component and streams
+  // fresh props down. Wrapping it in a transition keeps the button disabled
+  // until that lands, instead of the request finishing and the numbers on
+  // screen still being the old ones.
+  const [isPending, startTransition] = useTransition()
+  const busy = isLoading || isPending
   const router = useRouter();
 
   // A transfer changes these quantities server-side, and router.refresh() only
@@ -72,15 +78,16 @@ const HospitalStockDetails = ({
 
       if (!res.ok) {
         toast.error('حدث خطأ ما أثناء تعديل الكميات. الرجاء المحاولة مرة أخرى.');
-        setIsLoading(false)
         return;
       }
       toast.success('تمت تعديل الكميات بنجاح!');
-      router.push(`/hospitals/${hospitalId}`);
-      router.refresh();
+      // We are already on /hospitals/[id]; pushing that same route was a no-op
+      // that never resolved, so the button stayed on "جاري الحفظ..." forever.
+      startTransition(() => router.refresh());
     } catch (error: any) {
       toast.error('حدث خطأ ما أثناء تعديل الكميات. الرجاء المحاولة مرة أخرى.');
       console.error("Error updating:", error?.message);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -122,9 +129,9 @@ const HospitalStockDetails = ({
           <Button
             className="lg:w-2/3 w-full text-center py-6 text-xl font-semibold"
             type="submit"
-            disabled={isLoading}
+            disabled={busy}
           >
-            {isLoading ? 'جاري الحفظ...' : 'احفظ الكميات'}
+            {busy ? 'جاري الحفظ...' : 'احفظ الكميات'}
           </Button>
         </div>
       </form>

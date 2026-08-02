@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
@@ -22,9 +22,14 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
   // State for controlled inputs
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [open, setOpen] = useState(false) // Changed from true to false
+  // Controlled so a successful save can close the dialog itself, instead of
+  // leaving it open with its button stuck on "جاري الحفظ...".
+  const [dialogOpen, setDialogOpen] = useState(false)
   const [value, setValue] = useState("")
   const [startLocation, setStartLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const busy = isLoading || isPending
   const router = useRouter()
 
   useEffect(() => {
@@ -69,38 +74,44 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
       return;
     }
     setIsLoading(true)
-    const res = await fetch('/api/visit/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        authorization: `Bearer ${userToken}`,
-      },
-      body: JSON.stringify({
-        hospitalId: value,
-        shiftId,
-        startLocation,
-      }),
-    });
-    const data = await res.json();
+    try {
+      const res = await fetch('/api/visit/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({
+          hospitalId: value,
+          shiftId,
+          startLocation,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
 
-    if (res.status === 201 && data.visit?._id) {
-      toast.success('تمت إضافة الزيارة بنجاح!');
-      warnOnFence(data.visit?.startFenceStatus, data.visit?.startDistanceMeters, 'visit');
-      router.push(`/visits/${data.visit._id}`)
-    } else if (res.status === 409 && data.visit?._id) {
-      // An open visit already exists — take the employee to it rather than
-      // leaving them to create a duplicate.
-      toast.info(data.message || 'لديك زيارة مفتوحة بالفعل.');
-      router.push(`/visits/${data.visit._id}`)
-    } else {
-      toast.error(data.message || 'حدث خطأ ما أثناء إضافة الزيارة. الرجاء المحاولة مرة أخرى.');
+      if (res.status === 201 && data.visit?._id) {
+        toast.success('تمت إضافة الزيارة بنجاح!');
+        warnOnFence(data.visit?.startFenceStatus, data.visit?.startDistanceMeters, 'visit');
+        setDialogOpen(false)
+        startTransition(() => router.push(`/visits/${data.visit._id}`))
+      } else if (res.status === 409 && data.visit?._id) {
+        // An open visit already exists — take the employee to it rather than
+        // leaving them to create a duplicate.
+        toast.info(data.message || 'لديك زيارة مفتوحة بالفعل.');
+        setDialogOpen(false)
+        startTransition(() => router.push(`/visits/${data.visit._id}`))
+      } else {
+        toast.error(data.message || 'حدث خطأ ما أثناء إضافة الزيارة. الرجاء المحاولة مرة أخرى.');
+      }
+    } catch {
+      toast.error('حدث خطأ ما أثناء إضافة الزيارة. الرجاء المحاولة مرة أخرى.');
+    } finally {
       setIsLoading(false)
     }
-
   }
   
   return (
-    <Dialog>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
         <Button size="lg" className="space-x-10 py-7 bg-[#5570F1] hover:bg-[#3250e9] transition-all duration-500">
           <span className="text-lg">أبدأ زيارة جديدة</span>
@@ -169,8 +180,8 @@ const AddNewVisitDialog = ({userToken, shiftId}: {userToken: string; shiftId: st
         </Popover>
 
         <DialogFooter className="sm:justify-start">
-          <Button type="button" className='bg-[#5570F1] hover:bg-[#5570F1]' onClick={handleAddNewVisit} disabled={isLoading}>
-            {isLoading ? 'جاري الحفظ...' : 'حفظ'}
+          <Button type="button" className='bg-[#5570F1] hover:bg-[#5570F1]' onClick={handleAddNewVisit} disabled={busy}>
+            {busy ? 'جاري الحفظ...' : 'حفظ'}
           </Button>
           <DialogClose asChild>
             <Button type="button" variant="secondary" className='border-2 bg-white text-[#5570F1] border-solid border-[#5570F1]'>

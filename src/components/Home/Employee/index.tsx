@@ -171,7 +171,9 @@ export default function EmployeeDashboard({
   const hasLoc = startLoc && Number.isFinite(startLoc.lat) && Number.isFinite(startLoc.lng);
 
   const cta = busy
-    ? '...جاري'
+    ? shift
+      ? 'جاري إنهاء الدوام...'
+      : 'جاري التحميل...'
     : shift
     ? 'إنهاء الدوام'
     : resumableShift

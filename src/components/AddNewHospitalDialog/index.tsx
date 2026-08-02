@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -35,37 +35,47 @@ const AddNewHospitalDialog = ({userToken, isAdmin}: {userToken: string | undefin
   // so the picker would be meaningless for them.
   const [employeeIds, setEmployeeIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const busy = isLoading || isPending
+  // Controlled so a successful save can close the dialog itself — it used to
+  // stay open behind the new page with its button still saying "جاري الحفظ...".
+  const [open, setOpen] = useState(false)
   const router = useRouter()
 
   const handleAddNewHospital = async () => {
     setIsLoading(true)
-    const res = await fetch('/api/hospitals/create', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${userToken}`,
-      },
-      body: JSON.stringify({
-        name: hospitalName,
-        district,
-        city,
-        location: location ?? undefined,
-        employeeIds,
-      }),
-    });
-    const data = await res.json();
+    try {
+      const res = await fetch('/api/hospitals/create', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({
+          name: hospitalName,
+          district,
+          city,
+          location: location ?? undefined,
+          employeeIds,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
 
-    if (res.status === 201) {
+      if (res.status !== 201 || !data?.hospital?._id) {
+        toast.error(data?.message || 'حدث خطأ ما أثناء إضافة المستشفى. الرجاء المحاولة مرة أخرى.');
+        return;
+      }
       toast.success('تمت إضافة المستشفى بنجاح!');
-      router.push(`/hospitals/${data.hospital._id}`)
-    } else {
+      setOpen(false)
+      startTransition(() => router.push(`/hospitals/${data.hospital._id}`))
+    } catch {
       toast.error('حدث خطأ ما أثناء إضافة المستشفى. الرجاء المحاولة مرة أخرى.');
-      toast.error(data.message);
+    } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
           className="space-x-5 py-6"
@@ -122,8 +132,8 @@ const AddNewHospitalDialog = ({userToken, isAdmin}: {userToken: string | undefin
           )}
         </div>
         <DialogFooter className="sm:justify-start">
-          <Button type="button" className='bg-[#5570F1] hover:bg-[#5570F1]' onClick={handleAddNewHospital} disabled={isLoading}>
-            {isLoading ? 'جاري الحفظ...' : 'حفظ'}
+          <Button type="button" className='bg-[#5570F1] hover:bg-[#5570F1]' onClick={handleAddNewHospital} disabled={busy}>
+            {busy ? 'جاري الحفظ...' : 'حفظ'}
           </Button>
           <DialogClose asChild>
             <Button type="button" variant="secondary" className='border-2 bg-white text-[#5570F1] border-solid border-[#5570F1]'>
