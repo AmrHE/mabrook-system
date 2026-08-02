@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
-import React, { useState } from 'react'
+import React, { useState, useTransition } from 'react'
 import { toast } from 'sonner';
 
 const CreateNewProduct = ({userToken}: {userToken: string | undefined}) => {
@@ -17,6 +17,8 @@ const CreateNewProduct = ({userToken}: {userToken: string | undefined}) => {
   const [responseMessage, setResponseMessage] = useState('');
   const [createdProduct, setCreatedProduct] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const busy = isLoading || isPending
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -38,18 +40,23 @@ const CreateNewProduct = ({userToken}: {userToken: string | undefined}) => {
         }),
       });
 
-      const data = await res.json();
-      setCreatedProduct(data.product);
+      const data = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
-        toast.error('حدث خطأ ما أثناء إضافة المنتج. الرجاء المحاولة مرة أخرى.');
-        setIsLoading(false)
+      if (!res.ok || !data?.product?._id) {
+        // Without this return the success toast fired on failure, then the
+        // push threw on data.product._id and left the button spinning.
+        toast.error(data?.message || 'حدث خطأ ما أثناء إضافة المنتج. الرجاء المحاولة مرة أخرى.');
+        return;
       }
-      setResponseMessage('Product created successfully!');
+      setCreatedProduct(data.product);
+      setResponseMessage('تمت إضافة المنتج');
       toast.success('تمت إضافة المنتج بنجاح!');
-      router.push(`/products/${data.product._id}`);
+      startTransition(() => router.push(`/products/${data.product._id}`));
     } catch (error: any) {
+      toast.error('حدث خطأ ما أثناء إضافة المنتج. الرجاء المحاولة مرة أخرى.');
       setResponseMessage(`Error: ${error.message}`);
+    } finally {
+      setIsLoading(false)
     }
   };
 
@@ -100,8 +107,8 @@ const CreateNewProduct = ({userToken}: {userToken: string | undefined}) => {
         onChange={(e) => setWarehouseQuantity(Number(e.target.value))} 
       />
       <div className='flex items-center justify-center w-full mt-4'>
-        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>
-          { isLoading ? 'جاري الحفظ...' : 'اضف المنتج' }
+        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={busy}>
+          { busy ? 'جاري الحفظ...' : 'اضف المنتج' }
         </Button>
       </div>
     </form>

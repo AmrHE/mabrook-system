@@ -180,7 +180,13 @@ export default function StartShiftDialog({
 
         <DialogFooter className="sm:justify-start">
           <Button type="button" className="bg-[#5570F1] hover:bg-[#3250e9]" onClick={start} disabled={busy}>
-            {busy ? "...جاري" : "بدء الدوام"}
+            {busy
+              ? isResume
+                ? "جاري الاستئناف..."
+                : "جاري بدء الدوام..."
+              : isResume
+              ? "استئناف الدوام"
+              : "بدء الدوام"}
           </Button>
           <DialogClose asChild>
             <Button type="button" variant="secondary" className="border-2 bg-white text-[#5570F1] border-solid border-[#5570F1]">

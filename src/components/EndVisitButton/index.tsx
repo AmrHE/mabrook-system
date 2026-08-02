@@ -1,12 +1,14 @@
  
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useTransition } from 'react'
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 const EndVisitButton = ({id, userToken} : {id: string | undefined, userToken: string | undefined}) => {
   const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const busy = isLoading || isPending
   const router = useRouter();
 
   // Read a fresh GPS fix when ending the visit; endLocation is required.
@@ -32,27 +34,34 @@ const EndVisitButton = ({id, userToken} : {id: string | undefined, userToken: st
       return;
     }
 
-    const res = await fetch(`/api/visit/end-visit/${id}`, {
-      method: 'POST',
-      cache: 'no-store',
-      headers: {
-        'Content-Type': 'application/json',
-        authorization: `Bearer ${userToken}`,
-      },
-      body: JSON.stringify({ endLocation }),
-    });
-    if (!res.ok) {
+    // A network failure here used to escape the handler, stranding the button
+    // on "جاري الإنهاء..." with no way to retry.
+    try {
+      const res = await fetch(`/api/visit/end-visit/${id}`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({ endLocation }),
+      });
+      if (!res.ok) {
+        toast.error('حدث خطأ ما أثناء انهاء الزيارة. الرجاء المحاولة مرة أخرى.');
+        return;
+      }
+      toast.success('تم انهاء الزيارة بنجاح!');
+      startTransition(() => router.push(`/`))
+    } catch {
       toast.error('حدث خطأ ما أثناء انهاء الزيارة. الرجاء المحاولة مرة أخرى.');
+    } finally {
       setIsLoading(false)
-      return;
     }
-    toast.success('تم انهاء الزيارة بنجاح!');
-    router.push(`/`)
   }
   return (
-    <Button size="lg" className='py-5 bg-[#5570F1] hover:bg-[#3250e9] transition-all duration-500' onClick={endVisit} disabled={isLoading}>
+    <Button size="lg" className='py-5 bg-[#5570F1] hover:bg-[#3250e9] transition-all duration-500' onClick={endVisit} disabled={busy}>
       <span className='text-lg'>
-        {isLoading ? 'جاري الإنهاء...' : 'انهاء الزيارة'}
+        {busy ? 'جاري الإنهاء...' : 'انهاء الزيارة'}
       </span>
     </Button>
   )

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useTransition } from 'react'
 import { Label } from '../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
@@ -37,6 +37,8 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
   const [projects, setProjects] = useState<string[]>(['mabrook'])
   const [responseMessage, setResponseMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const busy = isLoading || isPending
   const router = useRouter();
 
   useEffect(() => {
@@ -91,8 +93,8 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
   }, [updatedUser]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    setIsLoading(true)
     e.preventDefault();
+    setIsLoading(true)
     try {
       const res = await fetch(`/api/user/update-user/${userId}`, {
         method: 'PATCH',
@@ -117,21 +119,23 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
         }),
       });
 
-      const data = await res.json();
-      setUpdatedUser(data.user);
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        toast.error('حدث خطأ ما أثناء تعديل الموظف. الرجاء المحاولة مرة أخرى.');
-        setIsLoading(false)
+        // Without this return the success toast fired on failure too.
+        toast.error(data?.message || 'حدث خطأ ما أثناء تعديل الموظف. الرجاء المحاولة مرة أخرى.');
+        return;
       }
+      setUpdatedUser(data.user);
       toast.success('تمت تعديل الموظف بنجاح!');
-      setResponseMessage('Mom submitted successfully!');      
-      router.push(`/employees/${userId}`);
-      
+      setResponseMessage('تم حفظ التعديلات');
+      // Already on /employees/[id] — refresh, don't push to the current route.
+      startTransition(() => router.refresh());
     } catch (error: any) {
       toast.error('حدث خطأ ما أثناء تعديل الموظف. الرجاء المحاولة مرة أخرى.');
-      toast.error(`Error: ${error.message}`);
       setResponseMessage(`Error: ${error.message}`);
+    } finally {
+      setIsLoading(false)
     }
   };
 
@@ -287,8 +291,8 @@ const EditEmployeeForm = ({userToken, employee}: {userToken: string | undefined,
       <IdentityImageUpload value={identityImage} onChange={setIdentityImage} />
 
       <div className='flex items-center justify-center w-full mt-4'>
-        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={isLoading}>
-          { isLoading ? 'جاري الحفظ...' : 'حفظ التعديلات' }
+        <Button className='lg:w-2/3 w-full text-center py-6 text-xl font-semibold' type='submit' disabled={busy}>
+          { busy ? 'جاري الحفظ...' : 'حفظ التعديلات' }
         </Button>
       </div>
     </form>
