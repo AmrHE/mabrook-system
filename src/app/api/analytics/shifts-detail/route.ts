@@ -57,6 +57,11 @@ export async function GET(req: NextRequest) {
         },
       },
       { $lookup: { from: "moms", localField: "visitIds", foreignField: "visitId", as: "shiftMoms" } },
+      // Hospital coordinates anchor the geofence circle on the row's map. Two
+      // lookups because a day can span hospitals: the top level needs its own,
+      // and each session resolves against its own `hospitalId`.
+      { $lookup: { from: "hospitals", localField: "hospitalId", foreignField: "_id", as: "hospitalDoc" } },
+      { $lookup: { from: "hospitals", localField: "segments.hospitalId", foreignField: "_id", as: "segHospitals" } },
       {
         $addFields: {
           productsCount: { $sum: { $map: { input: "$shiftMoms", as: "m", in: { $size: { $ifNull: ["$$m.survey", []] } } } } },
@@ -101,6 +106,25 @@ export async function GET(req: NextRequest) {
                 // Needed by the check-in map: one pin per SESSION, not per day.
                 startLocation: "$$s.startLocation",
                 endLocation: "$$s.endLocation",
+                hospitalLocation: {
+                  $let: {
+                    vars: {
+                      h: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$segHospitals",
+                              as: "h",
+                              cond: { $eq: ["$$h._id", "$$s.hospitalId"] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: "$$h.location",
+                  },
+                },
               },
             },
           },
@@ -124,6 +148,7 @@ export async function GET(req: NextRequest) {
           productsCount: 1,
           startLocation: 1,
           endLocation: 1,
+          hospitalLocation: { $arrayElemAt: ["$hospitalDoc.location", 0] },
           startFenceStatus: 1,
           startDistanceMeters: 1,
           autoClosed: { $ifNull: ["$autoClosed", false] },

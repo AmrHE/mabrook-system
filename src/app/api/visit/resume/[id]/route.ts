@@ -4,9 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/utils/auth/requireAuth";
 import { Visit } from "@/models/Visit";
 import { Shift } from "@/models/Shift";
+import { Hospital } from "@/models/Hospital";
 import { shiftStatus } from "@/models/enum.constants";
 import { riyadhDayKey } from "@/utils/date/range";
 import { getSettings } from "@/utils/settings/getSettings";
+import { evaluateFence } from "@/utils/geo/geofence";
 import { applyVisitRollups } from "@/utils/visit/rollup";
 
 /** Only keep a coordinate pair when both values are finite numbers. */
@@ -114,17 +116,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 
+  // Classify this session against the hospital, exactly as visit/create does for
+  // the first one. Without it every session after the first was unclassified and
+  // therefore invisible to the compliance report — an employee could start in
+  // range and resume from anywhere. Soft: never blocks.
+  const hospital = visit.hospitalId
+    ? await Hospital.findById(visit.hospitalId).select("location")
+    : null;
+  const fence = evaluateFence(startLocation, hospital?.location, settings.geofenceRadiusMeters);
+
   const segments = visit.segments ?? [];
   if (segments.length === 0) {
-    // Legacy visit: reconstruct the original session before appending.
+    // Legacy visit: reconstruct the original session before appending. The fence
+    // pair must come across too — applyVisitRollups projects segments[0] back
+    // onto the top level, so omitting it would erase the original verdict.
     segments.push({
       startTime: visit.startTime,
       endTime: visit.endTime,
       startLocation: visit.startLocation,
       endLocation: visit.endLocation,
+      startFenceStatus: visit.startFenceStatus,
+      startDistanceMeters: visit.startDistanceMeters,
     });
   }
-  segments.push({ startTime: now, startLocation });
+  const segment = {
+    startTime: now,
+    startLocation,
+    startFenceStatus: fence.status,
+    startDistanceMeters: fence.distanceMeters ?? undefined,
+  };
+  segments.push(segment);
   visit.segments = segments;
   applyVisitRollups(visit);
   await visit.save();
@@ -135,5 +156,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     { $set: { lastActivityAt: now } },
   ).catch(() => {});
 
-  return NextResponse.json({ message: "Visit resumed", visit }, { status: 200 });
+  // `segment`, not `visit`: the visit's top-level fence fields describe the
+  // ORIGINAL check-in, which on a resume is hours old — warning on those would
+  // report the wrong session.
+  return NextResponse.json({ message: "Visit resumed", visit, segment }, { status: 200 });
 }

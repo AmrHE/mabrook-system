@@ -26,6 +26,8 @@ export interface SessionDTO {
   endTime?: string;
   hospitalId?: string;
   hospitalName?: string;
+  /** Anchors the geofence circle on the dashboard's location map. */
+  hospitalLocation?: { lat?: number; lng?: number };
   autoClosed?: boolean;
   closeReason?: string;
 }
@@ -41,6 +43,7 @@ export interface DayShiftDTO {
   sessionsCount: number;
   hospitalId?: string;
   hospitalName?: string;
+  hospitalLocation?: { lat?: number; lng?: number };
   startLocation?: { lat?: number; lng?: number };
   endLocation?: { lat?: number; lng?: number };
   segments: SessionDTO[];
@@ -72,6 +75,7 @@ export interface CurrentState {
 
 const iso = (d: any) => (d ? new Date(d).toISOString() : undefined);
 const hospitalName = (h: any) => (h && typeof h === "object" ? h.name : undefined);
+const hospitalLocation = (h: any) => (h && typeof h === "object" ? h.location : undefined);
 const hospitalId = (h: any) =>
   h ? String(typeof h === "object" && h._id ? h._id : h) : undefined;
 
@@ -87,6 +91,7 @@ function toShiftDTO(doc: any): DayShiftDTO {
     sessionsCount: doc.sessionsCount ?? (doc.segments?.length || 1),
     hospitalId: hospitalId(doc.hospitalId),
     hospitalName: hospitalName(doc.hospitalId),
+    hospitalLocation: hospitalLocation(doc.hospitalId),
     startLocation: doc.startLocation,
     endLocation: doc.endLocation,
     segments: (doc.segments ?? []).map((s: any) => ({
@@ -94,6 +99,7 @@ function toShiftDTO(doc: any): DayShiftDTO {
       endTime: iso(s.endTime),
       hospitalId: hospitalId(s.hospitalId),
       hospitalName: hospitalName(s.hospitalId),
+      hospitalLocation: hospitalLocation(s.hospitalId),
       autoClosed: s.autoClosed,
       closeReason: s.closeReason,
     })),
@@ -119,8 +125,8 @@ export async function getCurrentState(userId: string): Promise<CurrentState> {
 
   const [today, staleOpen, settings] = await Promise.all([
     Shift.findOne({ userId, dayKey: todayKey })
-      .populate({ path: "hospitalId", select: "name" })
-      .populate({ path: "segments.hospitalId", select: "name" })
+      .populate({ path: "hospitalId", select: "name location" })
+      .populate({ path: "segments.hospitalId", select: "name location" })
       .lean(),
     Shift.findOne({
       userId,
@@ -142,7 +148,7 @@ export async function getCurrentState(userId: string): Promise<CurrentState> {
     isActive: true,
   })
     .sort({ startTime: -1 })
-    .populate({ path: "hospitalId", select: "name" })
+    .populate({ path: "hospitalId", select: "name location" })
     .lean();
 
   // A visit may only be resumed inside today's shift and within the inactivity
@@ -161,7 +167,7 @@ export async function getCurrentState(userId: string): Promise<CurrentState> {
     })
       .sort({ endTime: -1 })
       .limit(5)
-      .populate({ path: "hospitalId", select: "name" })
+      .populate({ path: "hospitalId", select: "name location" })
       .lean();
     resumableVisits = docs.map(toVisitDTO);
   }

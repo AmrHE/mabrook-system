@@ -5,6 +5,7 @@ import { requireAdmin } from "@/utils/auth/requireAdmin";
 import { Settings } from "@/models/Settings";
 import { getSettings } from "@/utils/settings/getSettings";
 import { invalidateMomRateBaseline } from "@/utils/analytics/visitProductivity";
+import { reclassifyFenceStatuses, type ReclassifyResult } from "@/utils/geo/reclassifyFence";
 
 export const dynamic = "force-dynamic";
 
@@ -104,7 +105,24 @@ export async function PUT(req: NextRequest) {
     // than after the TTL.
     invalidateMomRateBaseline();
 
-    return NextResponse.json({ settings: updated }, { status: 200 });
+    // A geofence verdict is frozen into each check-in at the moment it happens,
+    // so a radius change would otherwise only affect FUTURE check-ins and leave
+    // every past record labelled against the old number. Recompute the history
+    // from the distances already stored so this setting always describes what
+    // the reports show.
+    //
+    // Deliberately NOT conditional on the radius having changed: records
+    // predating this feature were judged against whatever the radius was then,
+    // and a "only if it changed" guard leaves that backlog permanently
+    // unreachable once the setting already holds the desired value. Running
+    // every time makes حفظ an idempotent resync — a repeat modifies 0 documents.
+    let reclassified: ReclassifyResult | undefined;
+    const newRadius = set.geofenceRadiusMeters as number | undefined;
+    if (newRadius !== undefined) {
+      reclassified = await reclassifyFenceStatuses(newRadius);
+    }
+
+    return NextResponse.json({ settings: updated, reclassified }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json({ status: 500, message: err?.message || "Failed to update settings" }, { status: 500 });
   }

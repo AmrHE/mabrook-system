@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { MapPoint } from "@/components/charts/PointsMap";
+import { useGeofenceRadius } from "@/components/GeofenceRadiusProvider";
 
 // Leaflet must never run on the server.
 const PointsMap = dynamic(() => import("@/components/charts/PointsMap"), { ssr: false });
@@ -39,6 +40,7 @@ export default function LocationModal({
   triggerText?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const radius = useGeofenceRadius();
 
   const points: MapPoint[] = [];
   // Hospital anchor first (blue) so a start→end line isn't distorted by it.
@@ -47,6 +49,10 @@ export default function LocationModal({
   if (isCoord(end)) points.push({ lat: end.lat, lng: end.lng, label: endLabel, color: "#EF4444" });
 
   if (points.length === 0) return <span className="text-gray-400">—</span>;
+
+  // The zone only means anything drawn around a known centre.
+  const circle =
+    isCoord(hospital) && radius ? { lat: hospital.lat, lng: hospital.lng, radiusMeters: radius } : undefined;
 
   const label = triggerText ?? `${points[0].lat.toFixed(4)}, ${points[0].lng.toFixed(4)}`;
 
@@ -67,11 +73,17 @@ export default function LocationModal({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <PointsMap points={points} />
+        <PointsMap points={points} circle={circle} />
         <div className="flex flex-wrap gap-4 text-xs text-gray-600">
           {isCoord(hospital) && (
             <span className="flex items-center gap-1">
               <span className="size-2 rounded-full bg-[#5570F1]" /> {hospitalLabel}
+            </span>
+          )}
+          {circle && (
+            <span className="flex items-center gap-1">
+              <span className="size-2 rounded-full border border-[#5570F1] bg-[#5570F1]/10" />{" "}
+              نطاق المستشفى ({circle.radiusMeters} م)
             </span>
           )}
           {isCoord(start) && (

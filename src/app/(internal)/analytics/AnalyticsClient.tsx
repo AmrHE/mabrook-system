@@ -659,6 +659,7 @@ function AttendanceTab({ userToken, range }: TabProps) {
     onTime: d.onTime ? "في الوقت" : "متأخر",
     startLocation: d.startLocation ?? null,
     endLocation: d.endLocation ?? null,
+    hospitalLocation: d.hospitalLocation ?? null,
     locationText:
       d.startLocation && Number.isFinite(d.startLocation.lat)
         ? `${d.startLocation.lat.toFixed(4)}, ${d.startLocation.lng.toFixed(4)}`
@@ -692,6 +693,7 @@ function AttendanceTab({ userToken, range }: TabProps) {
         <LocationModal
           start={row.original.startLocation}
           end={row.original.endLocation}
+          hospital={row.original.hospitalLocation}
           triggerText={row.original.locationText || undefined}
         />
       ),

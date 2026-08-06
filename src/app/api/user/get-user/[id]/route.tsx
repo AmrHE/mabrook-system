@@ -30,7 +30,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     path: "visits",
     model: "Visit",
     select: "hospitalId moms status isActive createdAt startTime endTime startLocation endLocation notes notesUpdatedAt",
-    populate: { path: "hospitalId", model: "Hospital", select: "name city district" },
+    // `location` anchors the geofence circle on each visit's location map.
+    populate: { path: "hospitalId", model: "Hospital", select: "name city district location" },
   })
   .populate({path: "assignedHospitals", model: "Hospital", select: "name city district"})
   .lean()

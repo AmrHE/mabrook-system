@@ -14,6 +14,8 @@ export interface VisitSegmentLike {
   endTime?: Date | string | null;
   startLocation?: { lat?: number; lng?: number } | null;
   endLocation?: { lat?: number; lng?: number } | null;
+  startFenceStatus?: string | null;
+  startDistanceMeters?: number | null;
 }
 
 const ms = (d: any): number => new Date(d).getTime();
@@ -40,6 +42,11 @@ export function applyVisitRollups<T>(input: T): T {
 
   doc.startTime = first.startTime;
   doc.startLocation = first.startLocation;
+  // The top-level fence pair is a projection of the FIRST session, matching
+  // applyShiftRollups. Callers that synthesise segments[0] from a legacy visit
+  // must copy the fence fields across, or this wipes the original verdict.
+  doc.startFenceStatus = first.startFenceStatus;
+  doc.startDistanceMeters = first.startDistanceMeters;
   doc.status = open ? shiftStatus.IN_PROGRESS : shiftStatus.ENDED;
   doc.endTime = open ? undefined : last.endTime;
 

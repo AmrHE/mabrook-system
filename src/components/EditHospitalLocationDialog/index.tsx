@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { reclassifiedSuffix } from "@/utils/geo/fenceToast";
 import type { LatLng } from "@/components/HospitalLocationPicker";
 
 // Leaflet must never run on the server.
@@ -53,7 +54,7 @@ export default function EditHospitalLocationDialog({
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success("تم حفظ موقع المستشفى");
+        toast.success("تم حفظ موقع المستشفى" + reclassifiedSuffix(data.reclassified));
         setOpen(false);
         router.refresh();
       } else {

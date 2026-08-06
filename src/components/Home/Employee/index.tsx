@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { CurrentState } from '@/utils/shift/currentState';
 import { formatSessionSpan } from '@/utils/shift/labels';
+import { warnOnFence } from '@/utils/geo/fenceToast';
 
 /** Best-effort geolocation capture — resolves null on denial/timeout/unsupported (never rejects). */
 function captureLocation(): Promise<{ lat: number; lng: number } | null> {
@@ -143,6 +144,9 @@ export default function EmployeeDashboard({
         await refresh();
         return;
       }
+      // The session just opened, not the visit — the visit's fence fields
+      // describe the original check-in, which on a resume is hours old.
+      warnOnFence(data.segment?.startFenceStatus, data.segment?.startDistanceMeters, 'visit');
       router.push(`/visits/${visitId}`);
     } finally {
       busyRef.current = false;
@@ -277,6 +281,7 @@ export default function EmployeeDashboard({
                   <LocationModal
                     start={startLoc}
                     end={shift.endLocation}
+                    hospital={shift.hospitalLocation}
                     triggerText={`${startLoc!.lat!.toFixed(5)}, ${startLoc!.lng!.toFixed(5)}`}
                   />
                 </div>

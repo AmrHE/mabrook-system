@@ -75,7 +75,7 @@ async function getMomsData(visitId: string, userToken: any) {
 
 
   const visit = await getVisitData(id, userToken);
-  const moms = await getMomsData(id, userToken);
+  const moms = await getMomsData(id, userToken);
 
   // Productivity is derived at read time from the team baseline the API returns.
   const momRateBaseline: MomRateBaseline | undefined = visit?.momRateBaseline;
@@ -198,7 +198,7 @@ async function getMomsData(visitId: string, userToken: any) {
               <LocationModal
                 start={visit.visit.startLocation}
                 end={visit.visit.endLocation}
-                hospital={visit.visit.hospitalId?.location}
+                hospital={visit.visit.hospitalId?.location}
                 startLabel="بداية الزيارة"
                 endLabel="نهاية الزيارة"
                 title="موقع الزيارة"

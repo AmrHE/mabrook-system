@@ -4,12 +4,19 @@ import { useState } from "react";
 import { Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { formatSessionSpan } from "@/utils/shift/labels";
+import LocationModal from "@/components/LocationModal";
+
+type Coord = { lat: number; lng: number } | null;
 
 export interface ShiftSessionRow {
   startTime: string | Date;
   endTime?: string | Date | null;
   autoClosed?: boolean;
   closeReason?: string;
+  startLoc?: Coord;
+  endLoc?: Coord;
+  /** This session's OWN hospital — a day can be resumed elsewhere. */
+  hospitalLoc?: Coord;
 }
 
 /**
@@ -54,6 +61,17 @@ export default function SessionsModal({
             <li key={i} className="flex items-center justify-between gap-4 text-sm border-b border-gray-100 pb-2 last:border-0">
               <span className="text-gray-500">الجلسة {i + 1}</span>
               <span className="font-medium">{formatSessionSpan(s.startTime, s.endTime)}</span>
+              {/* Each session against ITS OWN hospital — a day resumed at a
+                  second hospital must not be judged against the first. */}
+              <LocationModal
+                start={s.startLoc}
+                end={s.endLoc}
+                hospital={s.hospitalLoc}
+                startLabel="بداية الجلسة"
+                endLabel="نهاية الجلسة"
+                title={`موقع الجلسة ${i + 1}`}
+                triggerText="الموقع"
+              />
               <span className="text-gray-400 text-xs">
                 {s.autoClosed ? s.closeReason || "إغلاق تلقائي" : ""}
               </span>

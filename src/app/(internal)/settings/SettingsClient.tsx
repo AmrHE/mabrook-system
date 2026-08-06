@@ -20,6 +20,7 @@ import {
 import { Check, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { SettingsType } from "@/types/types";
+import { reclassifiedSuffix } from "@/utils/geo/fenceToast";
 import BackupCard from "./BackupCard";
 
 const FIELDS: { key: keyof SettingsType; label: string; hint: string; type: "time" | "number" }[] = [
@@ -534,7 +535,10 @@ export default function SettingsClient({ userToken }: { userToken?: string }) {
       if (!res.ok) {
         toast.error(data.message || "فشل الحفظ");
       } else {
-        toast.success("تم حفظ الإعدادات");
+        // Saving reconciles past check-ins with the geofence radius server-side;
+        // say so, otherwise a silent rewrite of historical reports looks like a
+        // bug when the out-of-range list suddenly changes.
+        toast.success("تم حفظ الإعدادات" + reclassifiedSuffix(data.reclassified));
         if (data.settings) setSettings(data.settings);
       }
     } catch {

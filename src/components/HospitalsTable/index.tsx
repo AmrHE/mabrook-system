@@ -44,7 +44,14 @@ export default function HospitalsTable({ data }: { data: HospitalRow[] }) {
       enableSorting: false,
       cell: ({ row }: any) =>
         row.original.location ? (
-          <LocationModal start={row.original.location} title="موقع المستشفى" startLabel="المستشفى" triggerText="عرض على الخريطة" />
+          // Passed as `hospital`, not `start`: it anchors the geofence circle,
+          // and doubling it as a start point would draw the same pin twice.
+          <LocationModal
+            hospital={row.original.location}
+            title="موقع المستشفى"
+            hospitalLabel="المستشفى"
+            triggerText="عرض على الخريطة"
+          />
         ) : (
           <span className="text-amber-600">غير محدد</span>
         ),

@@ -11,6 +11,13 @@ const VisitSegmentSchema = new mongoose.Schema({
   endTime: { type: Date, default: undefined },
   startLocation: { lat: Number, lng: Number },
   endLocation: { lat: Number, lng: Number },
+
+  // Per-session geofence verdict, mirroring ShiftSegmentSchema. Without these
+  // every session after the first was unclassified: the visit's top-level pair
+  // describes only the ORIGINAL check-in, so an employee could start in range
+  // and resume from anywhere and never show up in the compliance report.
+  startFenceStatus: { type: String, enum: fenceStatus, default: undefined },
+  startDistanceMeters: { type: Number, default: undefined },
 });
 
 const VisitSchema = new mongoose.Schema({
@@ -129,5 +136,7 @@ VisitSchema.index({ createdBy: 1, status: 1 });
 VisitSchema.index({ createdBy: 1, createdAt: -1 });
 VisitSchema.index({ isActive: 1, createdAt: -1 });
 VisitSchema.index({ hospitalId: 1, createdAt: -1 });
+// Powers the geofence compliance report's status filtering, mirroring Shift.
+VisitSchema.index({ startFenceStatus: 1, startTime: -1 });
 
 export const Visit = mongoose.models.Visit || mongoose.model('Visit', VisitSchema);

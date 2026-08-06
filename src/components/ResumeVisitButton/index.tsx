@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { RotateCcw } from 'lucide-react';
+import { warnOnFence } from '@/utils/geo/fenceToast';
 
 /**
  * Reopen an ended visit as a new session.
@@ -48,6 +49,9 @@ const ResumeVisitButton = ({ id, userToken }: { id: string; userToken: string | 
         return;
       }
       toast.success('تم استئناف الزيارة.');
+      // Warn on the session just opened, not the visit: the visit's fence fields
+      // describe the original check-in, which on a resume is hours old.
+      warnOnFence(data.segment?.startFenceStatus, data.segment?.startDistanceMeters, 'visit');
       router.refresh();
     } finally {
       setIsLoading(false)

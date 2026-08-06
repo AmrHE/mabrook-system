@@ -46,7 +46,12 @@ const COLUMNS: ShiftColumn[] = [
     header: "الموقع",
     sortable: false,
     cell: (r) => (
-      <LocationModal start={r.startLoc} end={r.endLoc} triggerText={r.startLocation || r.endLocation || undefined} />
+      <LocationModal
+        start={r.startLoc}
+        end={r.endLoc}
+        hospital={r.hospitalLoc}
+        triggerText={r.startLocation || r.endLocation || undefined}
+      />
     ),
   },
   { key: "autoClosed", header: "إغلاق تلقائي" },

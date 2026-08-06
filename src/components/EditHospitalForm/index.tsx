@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import EmployeeMultiSelect from "@/components/EmployeeMultiSelect";
 import LocationPicker from "@/components/LocationPicker";
+import { reclassifiedSuffix } from "@/utils/geo/fenceToast";
 import type { LatLng } from "@/components/HospitalLocationPicker";
 
 // Leaflet must never run on the server.
@@ -76,7 +77,7 @@ export default function EditHospitalForm({
         return;
       }
 
-      toast.success("تم حفظ بيانات المستشفى والموظفين المعينين");
+      toast.success("تم حفظ بيانات المستشفى والموظفين المعينين" + reclassifiedSuffix(data.reclassified));
       router.refresh();
     } catch {
       toast.error("فشل حفظ البيانات");

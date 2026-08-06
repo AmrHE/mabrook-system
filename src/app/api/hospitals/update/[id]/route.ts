@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/utils/auth/requireAdmin";
 import { Hospital } from "@/models/Hospital";
 import { resolveCity, resolveDistrict } from "@/utils/geo/locations.server";
+import { recomputeHospitalFences, type ReclassifyResult } from "@/utils/geo/reclassifyFence";
+import { getSettings } from "@/utils/settings/getSettings";
 
 /** Only keep a coordinate pair when both values are finite numbers. */
 function sanitizeLocation(loc: unknown): { lat: number; lng: number } | undefined {
@@ -77,11 +79,31 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   try {
+    // Captured BEFORE the write: moving the pin invalidates every distance
+    // measured against the old coordinates, and we can only tell it moved by
+    // comparing against what was there.
+    const before = set.location
+      ? ((await Hospital.findById(id).select("location").lean()) as { location?: { lat?: number; lng?: number } } | null)
+      : null;
+
     const updated = await Hospital.findByIdAndUpdate(id, { $set: set }, { new: true, runValidators: true });
     if (!updated) {
       return NextResponse.json({ status: 404, message: "لم يتم العثور على المستشفى" }, { status: 404 });
     }
-    return NextResponse.json({ message: "تم تحديث المستشفى بنجاح", hospital: updated }, { status: 200 });
+
+    // Past check-ins store a distance to this hospital and a verdict derived
+    // from it. Both are wrong the moment the hospital moves, and no radius-based
+    // recompute can fix them — the distance itself has to be re-measured from
+    // the device fix that was recorded at check-in. Setting coordinates for the
+    // first time also converts HOSPITAL_NOT_CONFIGURED records into real verdicts.
+    let reclassified: ReclassifyResult | undefined;
+    const next = set.location as { lat: number; lng: number } | undefined;
+    if (next && (before?.location?.lat !== next.lat || before?.location?.lng !== next.lng)) {
+      const settings = await getSettings();
+      reclassified = await recomputeHospitalFences(id, next, settings.geofenceRadiusMeters);
+    }
+
+    return NextResponse.json({ message: "تم تحديث المستشفى بنجاح", hospital: updated, reclassified }, { status: 200 });
   } catch (err) {
     // Duplicate name (unique index) or validation failure.
     if ((err as { code?: number })?.code === 11000) {

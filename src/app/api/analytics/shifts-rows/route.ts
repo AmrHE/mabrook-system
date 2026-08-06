@@ -47,10 +47,47 @@ export async function GET(req: NextRequest) {
       { $lookup: { from: "users", localField: "userId", foreignField: "_id", as: "employee" } },
       { $unwind: { path: "$employee", preserveNullAndEmptyArrays: true } },
       { $lookup: { from: "visits", localField: "_id", foreignField: "shiftId", as: "visits" } },
+      // Hospital coordinates anchor the geofence circle on the row's map. Two
+      // lookups because a day can span hospitals: the top level needs its own,
+      // and each session resolves against its own `hospitalId`.
+      { $lookup: { from: "hospitals", localField: "hospitalId", foreignField: "_id", as: "hospitalDoc" } },
+      { $lookup: { from: "hospitals", localField: "segments.hospitalId", foreignField: "_id", as: "segHospitals" } },
       {
         $addFields: {
           visitsCount: { $size: "$visits" },
           momsCount: { $sum: { $map: { input: "$visits", as: "v", in: { $size: { $ifNull: ["$$v.moms", []] } } } } },
+          segments: {
+            $map: {
+              input: { $ifNull: ["$segments", []] },
+              as: "s",
+              in: {
+                $mergeObjects: [
+                  "$$s",
+                  {
+                    hospitalLocation: {
+                      $let: {
+                        vars: {
+                          h: {
+                            $arrayElemAt: [
+                              {
+                                $filter: {
+                                  input: "$segHospitals",
+                                  as: "h",
+                                  cond: { $eq: ["$$h._id", "$$s.hospitalId"] },
+                                },
+                              },
+                              0,
+                            ],
+                          },
+                        },
+                        in: "$$h.location",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
         },
       },
       {
@@ -99,6 +136,7 @@ export async function GET(req: NextRequest) {
           momsCount: 1,
           startLocation: 1,
           endLocation: 1,
+          hospitalLocation: { $arrayElemAt: ["$hospitalDoc.location", 0] },
           autoClosed: { $ifNull: ["$autoClosed", false] },
           autoClosedSessions: {
             $size: {
@@ -144,6 +182,7 @@ export async function GET(req: NextRequest) {
           closeReason: closeReasonLabel(s.closeReason),
           startLoc: rawCoord(s.startLocation),
           endLoc: rawCoord(s.endLocation),
+          hospitalLoc: rawCoord(s.hospitalLocation),
         })),
         visitsCount: r.visitsCount ?? 0,
         momsCount: r.momsCount ?? 0,
@@ -151,6 +190,7 @@ export async function GET(req: NextRequest) {
         endLocation: coord(r.endLocation),
         startLoc: rawCoord(r.startLocation),
         endLoc: rawCoord(r.endLocation),
+        hospitalLoc: rawCoord(r.hospitalLocation),
         autoClosed: r.autoClosed ? "نعم" : "لا",
         autoClosedSessions: r.autoClosedSessions ?? 0,
         closeReason: closeReasonLabel(r.closeReason),

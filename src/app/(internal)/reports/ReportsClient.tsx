@@ -146,6 +146,7 @@ const TABS: TabConfig[] = [
           <LocationModal
             start={r.startLoc}
             end={r.endLoc}
+            hospital={r.hospitalLoc}
             startLabel="بداية الزيارة"
             endLabel="نهاية الزيارة"
             title="موقع الزيارة"

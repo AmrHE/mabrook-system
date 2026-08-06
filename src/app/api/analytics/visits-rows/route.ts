@@ -77,6 +77,8 @@ export async function GET(req: NextRequest) {
           notes: { $ifNull: ["$notes", ""] },
           startLocation: 1,
           endLocation: 1,
+          // Anchors the geofence circle on the row's location map.
+          hospitalLocation: "$hospital.location",
         },
       },
       { $sort: { startTime: -1 } },
@@ -102,6 +104,7 @@ export async function GET(req: NextRequest) {
       endLocation: coord(r.endLocation),
       startLoc: rawCoord(r.startLocation),
       endLoc: rawCoord(r.endLocation),
+      hospitalLoc: rawCoord(r.hospitalLocation),
     }));
 
     return NextResponse.json({ rows }, { status: 200 });

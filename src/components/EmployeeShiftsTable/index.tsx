@@ -34,6 +34,7 @@ const columns: ColumnDef<any>[] = [
       <LocationModal
         start={row.original.startLocation}
         end={row.original.endLocation}
+        hospital={row.original.hospitalLocation}
         triggerText={row.original.location || undefined}
       />
     ),
@@ -70,6 +71,7 @@ export default function EmployeeShiftsTable({ userToken, employeeId }: { userTok
           onTime: d.onTime ? "في الوقت" : "متأخر",
           startLocation: d.startLocation ?? null,
           endLocation: d.endLocation ?? null,
+          hospitalLocation: d.hospitalLocation ?? null,
           location:
             d.startLocation && Number.isFinite(d.startLocation.lat)
               ? `${d.startLocation.lat.toFixed(4)}, ${d.startLocation.lng.toFixed(4)}`

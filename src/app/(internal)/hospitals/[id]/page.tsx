@@ -86,7 +86,11 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
             <p>{h?.city}</p>
             <p>{h?.district}</p>
             {hasLocation ? (
-              <LocationModal start={h.location} title="موقع المستشفى" startLabel="المستشفى" />
+              <LocationModal
+                hospital={h.location}
+                title="موقع المستشفى"
+                hospitalLabel="المستشفى"
+              />
             ) : (
               <span className='text-amber-600'>غير محدد</span>
             )}

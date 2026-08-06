@@ -23,12 +23,18 @@ function sanitizeLocation(loc: unknown): { lat: number; lng: number } | undefine
 
 /**
  * Classify a check-in against the chosen hospital's coordinates (soft — never
- * blocks). Returns undefined when no hospital was picked (older clients).
+ * blocks).
+ *
+ * A missing hospital is classified, not skipped. Returning undefined here used
+ * to leave the record with no fence field at all, and the compliance report
+ * filters on `startFenceStatus != null` — so a check-in by an employee with no
+ * assigned hospital vanished from the report entirely instead of being flagged.
+ * `evaluateFence` already yields HOSPITAL_NOT_CONFIGURED for a missing centre
+ * (or NO_LOCATION_FIX when the device fix is also missing, which it checks first).
  */
-async function computeFence(loc: LatLng | undefined, hospitalId: string | undefined): Promise<FenceResult | undefined> {
-  if (!hospitalId) return undefined;
+async function computeFence(loc: LatLng | undefined, hospitalId: string | undefined): Promise<FenceResult> {
   const [hospital, settings] = await Promise.all([
-    Hospital.findById(hospitalId).select("location"),
+    hospitalId ? Hospital.findById(hospitalId).select("location") : null,
     getSettings(),
   ]);
   return evaluateFence(loc, hospital?.location, settings.geofenceRadiusMeters);
@@ -152,7 +158,7 @@ export async function POST(req: NextRequest) {
           if (!running.hospitalId) running.hospitalId = hospitalId;
           changed = true;
         }
-        if (!open.startFenceStatus && fence) {
+        if (!open.startFenceStatus) {
           open.startFenceStatus = fence.status;
           open.startDistanceMeters = fence.distanceMeters ?? undefined;
           if (!running.startFenceStatus) {
@@ -178,8 +184,8 @@ export async function POST(req: NextRequest) {
       startTime: now,
       hospitalId,
       startLocation,
-      startFenceStatus: fence?.status,
-      startDistanceMeters: fence?.distanceMeters ?? undefined,
+      startFenceStatus: fence.status,
+      startDistanceMeters: fence.distanceMeters ?? undefined,
     });
 
     // (2) Today's shift exists but was closed — append a session.
@@ -232,8 +238,8 @@ export async function POST(req: NextRequest) {
         lastActivityAt: now,
         startLocation,
         hospitalId: hospitalId || undefined,
-        startFenceStatus: fence?.status,
-        startDistanceMeters: fence?.distanceMeters ?? undefined,
+        startFenceStatus: fence.status,
+        startDistanceMeters: fence.distanceMeters ?? undefined,
       });
 
       user.shifts.push(created._id);

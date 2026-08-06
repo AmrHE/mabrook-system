@@ -75,6 +75,7 @@ const SingledEmployeePage = async ({ params }: { params: Promise<{ id: string }>
         notesUpdatedAt: v.notesUpdatedAt ?? null,
         startLoc: rawCoord(v.startLocation),
         endLoc: rawCoord(v.endLocation),
+        hospitalLoc: rawCoord(v.hospitalId?.location),
         startLocationText: coordText(v.startLocation),
         endLocationText: coordText(v.endLocation),
       };

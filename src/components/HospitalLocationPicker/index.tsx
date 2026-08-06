@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
+import { Circle, MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useGeofenceRadius } from "@/components/GeofenceRadiusProvider";
 
 export type LatLng = { lat: number; lng: number };
 
@@ -39,11 +40,19 @@ function ClickCapture({ onPick }: { onPick: (p: LatLng) => void }) {
 }
 
 /** Recenters the map when the value changes (e.g. after an address search). */
-function Recenter({ value }: { value: LatLng | null }) {
+function Recenter({ value, radiusMeters }: { value: LatLng | null; radiusMeters?: number }) {
   const map = useMap();
   useEffect(() => {
-    if (value) map.setView([value.lat, value.lng], Math.max(map.getZoom(), 15));
-  }, [value, map]);
+    if (!value) return;
+    // With a zone drawn, fit the whole circle instead of forcing zoom 15 — a
+    // 2.5 km radius overflows this 300 px map several times over at that zoom,
+    // which would hide the very thing the admin is trying to see.
+    if (radiusMeters) {
+      map.fitBounds(L.latLng(value.lat, value.lng).toBounds(radiusMeters * 2), { padding: [20, 20] });
+    } else {
+      map.setView([value.lat, value.lng], Math.max(map.getZoom(), 15));
+    }
+  }, [value, radiusMeters, map]);
   return null;
 }
 
@@ -61,6 +70,8 @@ export default function HospitalLocationPicker({
 }) {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  // The zone this pin will anchor, so the admin sees its reach while placing it.
+  const radius = useGeofenceRadius();
 
   const center: [number, number] = value ? [value.lat, value.lng] : DEFAULT_CENTER;
 
@@ -112,7 +123,20 @@ export default function HospitalLocationPicker({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <ClickCapture onPick={onChange} />
-          <Recenter value={value} />
+          <Recenter value={value} radiusMeters={radius} />
+          {value && radius && (
+            <Circle
+              center={[value.lat, value.lng]}
+              radius={radius}
+              pathOptions={{
+                color: "#5570F1",
+                fillColor: "#5570F1",
+                fillOpacity: 0.08,
+                weight: 1,
+                dashArray: "4",
+              }}
+            />
+          )}
           {value && (
             <Marker
               position={[value.lat, value.lng]}

@@ -36,24 +36,41 @@ function summarize(groups: { _id: string; count: number }[]): Counts {
 }
 
 /**
- * Flatten a shift's `segments[]` so each CHECK-IN is a row.
+ * Flatten a `segments[]` array so each CHECK-IN is a row.
  *
  * This is load-bearing, not a refinement. A shift document is now a whole day,
  * and its top-level `startFenceStatus` describes only the day's FIRST check-in.
  * Grouping on it would count one verdict per day and silently drop every
  * resume — an employee could check in in-range at 09:00 and out-of-range at
- * 14:00 and never appear in this report.
+ * 14:00 and never appear in this report. Visits have exactly the same shape.
  *
- * Legacy rows have no segments; `preserveNullAndEmptyArrays` + the `$ifNull`
- * fallbacks keep them counted exactly as before.
+ * A verdict field takes the session's own value, falling back to the row's —
+ * but ONLY for the first session. The row-level pair describes the FIRST
+ * check-in, so letting every session inherit it would count one verdict once
+ * per session and inflate a two-session record into two identical rows.
+ * Restricting the fallback to index 0 keeps records that predate per-session
+ * verdicts counted exactly once (rather than dropped) while letting genuine
+ * per-session verdicts stand on their own.
+ *
+ * `includeArrayIndex` yields null for a legacy row with no sessions at all,
+ * which the `[null, 0]` test folds into the same branch.
  */
-const unwindShiftSessions: any[] = [
-  { $unwind: { path: "$segments", preserveNullAndEmptyArrays: true } },
+const sessionVerdict = (field: string) => ({
+  $ifNull: [
+    `$segments.${field}`,
+    { $cond: [{ $in: ["$sessionIndex", [null, 0]] }, `$${field}`, null] },
+  ],
+});
+
+const unwindSessions: any[] = [
+  { $unwind: { path: "$segments", preserveNullAndEmptyArrays: true, includeArrayIndex: "sessionIndex" } },
   {
     $addFields: {
-      startFenceStatus: { $ifNull: ["$segments.startFenceStatus", "$startFenceStatus"] },
-      startDistanceMeters: { $ifNull: ["$segments.startDistanceMeters", "$startDistanceMeters"] },
-      startLocation: { $ifNull: ["$segments.startLocation", "$startLocation"] },
+      startFenceStatus: sessionVerdict("startFenceStatus"),
+      startDistanceMeters: sessionVerdict("startDistanceMeters"),
+      startLocation: sessionVerdict("startLocation"),
+      // Join keys, not counted metrics, so these inherit unconditionally: a
+      // visit is single-hospital and its sessions carry no `hospitalId`.
       hospitalId: { $ifNull: ["$segments.hospitalId", "$hospitalId"] },
       sessionStartTime: { $ifNull: ["$segments.startTime", "$startTime"] },
     },
@@ -117,13 +134,18 @@ export async function GET(req: NextRequest) {
     const [shiftGroups, visitGroups, shiftOutliers, visitOutliers, hospitalsNeedingLocation] = await Promise.all([
       Shift.aggregate([
         { $match: shiftMatch },
-        ...unwindShiftSessions,
+        ...unwindSessions,
         { $match: { startFenceStatus: { $ne: null } } },
         { $group: { _id: "$startFenceStatus", count: { $sum: 1 } } },
       ]),
-      Visit.aggregate([{ $match: { ...visitMatch, startFenceStatus: { $ne: null } } }, { $group: { _id: "$startFenceStatus", count: { $sum: 1 } } }]),
-      Shift.aggregate(outlierPipeline(shiftMatch, "userId", "sessionStartTime", "shift", unwindShiftSessions)),
-      Visit.aggregate(outlierPipeline(visitMatch, "createdBy", "startTime", "visit")),
+      Visit.aggregate([
+        { $match: visitMatch },
+        ...unwindSessions,
+        { $match: { startFenceStatus: { $ne: null } } },
+        { $group: { _id: "$startFenceStatus", count: { $sum: 1 } } },
+      ]),
+      Shift.aggregate(outlierPipeline(shiftMatch, "userId", "sessionStartTime", "shift", unwindSessions)),
+      Visit.aggregate(outlierPipeline(visitMatch, "createdBy", "sessionStartTime", "visit", unwindSessions)),
       Hospital.find({ isActive: true, "location.lat": null }).select("name city district").lean(),
     ]);
 
