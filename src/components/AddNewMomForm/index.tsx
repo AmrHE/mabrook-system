@@ -26,10 +26,10 @@ const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | unde
   const [address, setAddress] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [allowFutureCom, setAllowFutureCom] = useState(true)
-  const [numberOfKids, setNumberOfKids] = useState<number | null>(0)
-  const [numberOfnewborns, setNumberOfnewborns] = useState(0)
-  const [numberOfMales, setNumberOfMales] = useState<number | null>(0)
-  const [numberOfFemales, setNumberOfFemales] = useState<number | null>(0)
+  const [numberOfKids, setNumberOfKids] = useState<number | null>(null)
+  const [numberOfnewborns, setNumberOfnewborns] = useState<number | null>(null)
+  const [numberOfMales, setNumberOfMales] = useState<number | null>(null)
+  const [numberOfFemales, setNumberOfFemales] = useState<number | null>(null)
   const [genderOfNewborns, setGenderOfNewborns] = useState<string[]>([])
   const [installedApp, setInstalledApp] = useState<string[]>([])
   const [signatureData, setSignatureData] = useState<string | null>(null)
@@ -68,9 +68,9 @@ const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | unde
   }
 
   const handleNewbornCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const count = parseInt(e.target.value) || 0
+    const count = e.target.value === '' ? null : parseInt(e.target.value) || 0
     setNumberOfnewborns(count)
-    setGenderOfNewborns(Array(count).fill(''))
+    setGenderOfNewborns(Array(count ?? 0).fill(''))
   }
 
   const clearSignature = () => {
@@ -285,7 +285,7 @@ const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | unde
         type="number"
         min={0}
         required
-        value={numberOfnewborns}
+        value={numberOfnewborns ?? ''}
         onChange={handleNewbornCountChange}
       />
 
@@ -311,7 +311,7 @@ const AddNewMomForm = ({ userToken, visit, isAdmin }: { userToken: string | unde
         onChange={(e) => setNumberOfFemales(e.target.value === '' ? null : Number(e.target.value))}
       />
 
-      {Array.from({ length: numberOfnewborns }, (_, index) => (
+      {Array.from({ length: numberOfnewborns ?? 0 }, (_, index) => (
         <div key={index} className='flex items-center gap-12'>
           <Label className="block font-medium mb-1">جنس المولود رقم {index + 1}</Label>
           <Select
