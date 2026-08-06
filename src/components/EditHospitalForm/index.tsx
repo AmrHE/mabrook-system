@@ -28,6 +28,9 @@ export default function EditHospitalForm({
   initialDistrict,
   initialLocation,
   initialAssignedEmployeeIds,
+  initialManagerName,
+  initialManagerPhone,
+  initialManagerEmail,
   isAdmin = false,
 }: {
   id: string;
@@ -37,11 +40,17 @@ export default function EditHospitalForm({
   initialDistrict?: string;
   initialLocation?: LatLng | null;
   initialAssignedEmployeeIds?: string[];
+  initialManagerName?: string;
+  initialManagerPhone?: string;
+  initialManagerEmail?: string;
   isAdmin?: boolean;
 }) {
   const [name, setName] = useState(initialName ?? "");
   const [city, setCity] = useState(initialCity ?? "");
   const [district, setDistrict] = useState(initialDistrict ?? "");
+  const [managerName, setManagerName] = useState(initialManagerName ?? "");
+  const [managerPhone, setManagerPhone] = useState(initialManagerPhone ?? "");
+  const [managerEmail, setManagerEmail] = useState(initialManagerEmail ?? "");
   const [location, setLocation] = useState<LatLng | null>(initialLocation ?? null);
   const [employeeIds, setEmployeeIds] = useState<string[]>(initialAssignedEmployeeIds ?? []);
   const [saving, setSaving] = useState(false);
@@ -57,7 +66,15 @@ export default function EditHospitalForm({
       const res = await fetch(`/api/hospitals/update/${id}`, {
         method: "PUT",
         headers: { authorization: `Bearer ${userToken}`, "content-type": "application/json" },
-        body: JSON.stringify({ name, city, district, location: location ?? undefined }),
+        body: JSON.stringify({
+          name,
+          city,
+          district,
+          location: location ?? undefined,
+          managerName,
+          managerPhone,
+          managerEmail,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -105,6 +122,32 @@ export default function EditHospitalForm({
       <div className="grid gap-1.5 z-50">
         <Label>موقع المستشفى (لتقييد تسجيل الحضور)</Label>
         <HospitalLocationPicker value={location} onChange={setLocation} />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="edit-manager-name">اسم مدير المستشفى (اختياري)</Label>
+        <Input id="edit-manager-name" value={managerName} onChange={(e) => setManagerName(e.target.value)} />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="edit-manager-phone">رقم جوال مدير المستشفى (اختياري)</Label>
+        <Input
+          id="edit-manager-phone"
+          type="tel"
+          dir="ltr"
+          className="text-right"
+          value={managerPhone}
+          onChange={(e) => setManagerPhone(e.target.value)}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="edit-manager-email">البريد الإلكتروني لمدير المستشفى (اختياري)</Label>
+        <Input
+          id="edit-manager-email"
+          type="email"
+          dir="ltr"
+          className="text-right"
+          value={managerEmail}
+          onChange={(e) => setManagerEmail(e.target.value)}
+        />
       </div>
       <div className="grid gap-1.5">
         <Label>الموظفون المعينون</Label>

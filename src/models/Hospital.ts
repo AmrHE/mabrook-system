@@ -31,6 +31,14 @@ const HospitalSchema = new mongoose.Schema({
 
   district: String,
 
+  // Contact details of the hospital's manager. All optional — hospitals created
+  // before this feature (and ones registered in the field by employees) have none.
+  managerName: String,
+
+  managerPhone: String,
+
+  managerEmail: String,
+
   // Geographic anchor for geofencing shift/visit check-ins. Optional: hospitals
   // created before this feature have no coordinates until an admin sets them
   // (check-ins against them record fenceStatus HOSPITAL_NOT_CONFIGURED).

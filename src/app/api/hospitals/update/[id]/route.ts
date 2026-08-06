@@ -46,6 +46,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     set.name = value;
   }
 
+  // Manager contact details are all optional, so an empty string is a valid
+  // value here — it clears a field the admin no longer wants filled.
+  if (body.managerName !== undefined) {
+    set.managerName = String(body.managerName).trim();
+  }
+
+  if (body.managerPhone !== undefined) {
+    set.managerPhone = String(body.managerPhone).trim();
+  }
+
+  if (body.managerEmail !== undefined) {
+    const value = String(body.managerEmail).trim();
+    if (value && !/^\S+@\S+\.\S+$/.test(value)) {
+      return NextResponse.json({ status: 400, message: "البريد الإلكتروني لمدير المستشفى غير صحيح" }, { status: 400 });
+    }
+    set.managerEmail = value;
+  }
+
   // City/district must be canonical (from the approved list). District validity
   // depends on the city, so resolve the effective city first — the one in the
   // request if provided, otherwise the hospital's current city.

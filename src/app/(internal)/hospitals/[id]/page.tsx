@@ -97,6 +97,32 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
           </div>
         </div>
 
+        <h4 className='mt-12 mb-4 font-semibold text-gray-700 text-xl'>بيانات مدير المستشفى</h4>
+        <div className='flex max-w-[350px] justify-between'>
+          <div className='flex flex-col gap-5'>
+            <p>اسم المدير</p>
+            <p>رقم الجوال</p>
+            <p>البريد الإلكتروني</p>
+          </div>
+          <div className='flex flex-col gap-5'>
+            <p>{h?.managerName || <span className='text-gray-400'>غير محدد</span>}</p>
+            <p dir='ltr' className='text-right'>
+              {h?.managerPhone ? (
+                <a href={`tel:${h.managerPhone}`} className='text-[#5570F1] hover:underline'>{h.managerPhone}</a>
+              ) : (
+                <span className='text-gray-400'>غير محدد</span>
+              )}
+            </p>
+            <p dir='ltr' className='text-right'>
+              {h?.managerEmail ? (
+                <a href={`mailto:${h.managerEmail}`} className='text-[#5570F1] hover:underline'>{h.managerEmail}</a>
+              ) : (
+                <span className='text-gray-400'>غير محدد</span>
+              )}
+            </p>
+          </div>
+        </div>
+
         <h4 className='mt-12 mb-4 font-semibold text-gray-700 text-xl'>الموظفون المعينون</h4>
         <div className='flex max-w-[350px] justify-between'>
           <div className='flex flex-col gap-5'>
@@ -135,6 +161,9 @@ const SingleHospitalPage = async ({ params }: { params: Promise<{ id: string }> 
             initialDistrict={h?.district}
             initialLocation={hasLocation ? h.location : null}
             initialAssignedEmployeeIds={assignedEmployees.map((e) => e._id)}
+            initialManagerName={h?.managerName}
+            initialManagerPhone={h?.managerPhone}
+            initialManagerEmail={h?.managerEmail}
             isAdmin={isAdmin}
           />
         </TabsContent>

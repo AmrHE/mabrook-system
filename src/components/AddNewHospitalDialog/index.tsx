@@ -31,6 +31,11 @@ const AddNewHospitalDialog = ({userToken, isAdmin}: {userToken: string | undefin
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
   const [location, setLocation] = useState<LatLng | null>(null);
+  // Manager contact details — optional; an employee registering a hospital in
+  // the field often doesn't have them yet.
+  const [managerName, setManagerName] = useState('');
+  const [managerPhone, setManagerPhone] = useState('');
+  const [managerEmail, setManagerEmail] = useState('');
   // Admin-only and optional. An employee is always assigned to what they create,
   // so the picker would be meaningless for them.
   const [employeeIds, setEmployeeIds] = useState<string[]>([]);
@@ -56,12 +61,16 @@ const AddNewHospitalDialog = ({userToken, isAdmin}: {userToken: string | undefin
           city,
           location: location ?? undefined,
           employeeIds,
+          managerName,
+          managerPhone,
+          managerEmail,
         }),
       });
       const data = await res.json().catch(() => ({}));
 
       if (res.status !== 201 || !data?.hospital?._id) {
-        toast.error(data?.message || 'حدث خطأ ما أثناء إضافة المستشفى. الرجاء المحاولة مرة أخرى.');
+        // The create route reports validation failures under `error`, not `message`.
+        toast.error(data?.message || data?.error || 'حدث خطأ ما أثناء إضافة المستشفى. الرجاء المحاولة مرة أخرى.');
         return;
       }
       toast.success('تمت إضافة المستشفى بنجاح!');
@@ -118,6 +127,32 @@ const AddNewHospitalDialog = ({userToken, isAdmin}: {userToken: string | undefin
 
           <Label className="mt-2 text-sm text-gray-600">موقع المستشفى (لتقييد تسجيل الحضور)</Label>
           <HospitalLocationPicker value={location} onChange={setLocation} />
+
+          <Label className="mt-2 text-sm text-gray-600">بيانات مدير المستشفى (اختياري)</Label>
+          <Input
+            placeholder="اسم مدير المستشفى"
+            id="managerName"
+            value={managerName}
+            onChange={(e) => setManagerName(e.target.value)}
+          />
+          <Input
+            placeholder="رقم جوال مدير المستشفى"
+            id="managerPhone"
+            type="tel"
+            dir="ltr"
+            className="text-right"
+            value={managerPhone}
+            onChange={(e) => setManagerPhone(e.target.value)}
+          />
+          <Input
+            placeholder="البريد الإلكتروني لمدير المستشفى"
+            id="managerEmail"
+            type="email"
+            dir="ltr"
+            className="text-right"
+            value={managerEmail}
+            onChange={(e) => setManagerEmail(e.target.value)}
+          />
 
           {/* Employees are assigned to their own hospital automatically, so this
               picker is only meaningful — and only permitted — for admins. */}

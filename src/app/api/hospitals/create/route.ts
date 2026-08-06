@@ -21,9 +21,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({status: 400, message: 'Cannot identify the user Please re-login and try again'});
   }
 
-  const { name, district, city, location, employeeIds } = await req.json();
+  const { name, district, city, location, employeeIds, managerName, managerPhone, managerEmail } = await req.json();
   if (!name || !district || !city) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+  }
+
+  // Manager contact details are optional at creation — an employee registering a
+  // hospital in the field often doesn't have them, and an admin can fill them in
+  // later from the hospital's edit tab.
+  const manager = {
+    managerName: String(managerName ?? '').trim(),
+    managerPhone: String(managerPhone ?? '').trim(),
+    managerEmail: String(managerEmail ?? '').trim(),
+  };
+  if (manager.managerEmail && !/^\S+@\S+\.\S+$/.test(manager.managerEmail)) {
+    return NextResponse.json({ error: 'البريد الإلكتروني لمدير المستشفى غير صحيح' }, { status: 400 });
   }
 
   // City/district must come from the approved list (prevents free-text spelling
@@ -63,6 +75,7 @@ export async function POST(req: NextRequest) {
     district: canonicalDistrict,
     city: canonicalCity,
     location: sanitizedLocation,
+    ...manager,
     createdBy: userPayload._id,
     productStocks,
   });
